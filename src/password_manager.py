@@ -207,6 +207,18 @@ class AccountManager:
                     reused_in.append(service)
         return reused_in
 
+    def check_password_age(self) -> List[Tuple[str, int]]:
+        """Returns list of (service, days_old) for passwords older than 90 days"""
+        aging_passwords = []
+        if self.user_manager.current_user:
+            accounts = self.user_manager.users[self.user_manager.current_user]['accounts']
+            for service, details in accounts.items():
+                last_changed = datetime.fromisoformat(details['last_changed'])
+                days_old = (datetime.now() - last_changed).days
+                if days_old >= 90:  # Password is older than 90 days
+                    aging_passwords.append((service, days_old))
+        return aging_passwords
+
 def main():
     user_manager = UserManager()
     analyzer = PasswordAnalyzer()
