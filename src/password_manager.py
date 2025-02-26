@@ -6,6 +6,8 @@ from getpass import getpass
 import json
 import os
 from datetime import datetime
+import random
+import string
 
 class UserManager:
     def __init__(self):
@@ -44,6 +46,32 @@ class PasswordAnalyzer:
     def __init__(self):
         self.min_length = 8
         self.api_url = "https://api.pwnedpasswords.com/range/"
+
+    def generate_password(self, length: int = 16) -> str:
+        if length < self.min_length:
+            length = self.min_length
+            
+        # Define character sets
+        lowercase = string.ascii_lowercase
+        uppercase = string.ascii_uppercase
+        digits = string.digits
+        special = "!@#$%^&*(),.?\":{}|<>_"
+        
+        # Ensure at least one character from each set
+        password = [
+            random.choice(lowercase),
+            random.choice(uppercase),
+            random.choice(digits),
+            random.choice(special)
+        ]
+        
+        # Fill the rest with random characters from all sets
+        all_chars = lowercase + uppercase + digits + special
+        password.extend(random.choice(all_chars) for _ in range(length - 4))
+        
+        # Shuffle the password
+        random.shuffle(password)
+        return ''.join(password)
 
     def check_strength(self, password: str) -> Tuple[int, List[str]]:
         score = 0
@@ -176,10 +204,11 @@ def main():
         print("2. Check password breach")
         print("3. Add account")
         print("4. View accounts")
-        print("5. Logout")
-        print("6. Exit")
+        print("5. Generate password")  # New option
+        print("6. Logout")
+        print("7. Exit")
 
-        choice = input("\nEnter your choice (1-6): ")  # Fix: changed to 1-6
+        choice = input("\nEnter your choice (1-7): ")
 
         if choice == '1':
             password = getpass("Enter password to check: ")
@@ -288,11 +317,29 @@ def main():
             input("\nPress Enter to continue..." )
 
         elif choice == '5':
+            try:
+                generated_password = analyzer.generate_password(30)
+                print("\nGenerated Password:", generated_password)
+                print("\nPassword Analysis:")
+                score, feedback = analyzer.check_strength(generated_password)
+                print(f"Strength Score: {score}/5")
+                is_breached, count = analyzer.check_breach(generated_password)
+                if is_breached:
+                    print(f"WARNING: This password has been found in {count} data breaches!")
+                else:
+                    print("This password hasn't been found in any known data breaches.")
+            except ValueError:
+                print("\nInvalid input! Using default length of 16.")
+                generated_password = analyzer.generate_password()
+                print("\nGenerated Password:", generated_password)
+            input("\nPress Enter to continue...")
+
+        elif choice == '6':
             user_manager.current_user = None
             print("\nLogged out successfully!")
             break
 
-        elif choice == '6':
+        elif choice == '7':
             print("Thank you for using Password Security Assessment Tool!")
             break
 
