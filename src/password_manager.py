@@ -8,23 +8,69 @@ import os
 from datetime import datetime
 import random
 import string
+from cryptography.fernet import Fernet
+import base64
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 class UserManager:
     def __init__(self):
         self.users_file = os.path.join(os.path.dirname(__file__), 'users.json')
+        self.salt_file = os.path.join(os.path.dirname(__file__), '.salt')
+        self.key_file = os.path.join(os.path.dirname(__file__), '.key')
         self.current_user = None
+        self._initialize_encryption()
         self.load_users()
+
+    def _initialize_encryption(self):
+        # Generate or load salt
+        if os.path.exists(self.salt_file):
+            with open(self.salt_file, 'rb') as f:
+                self.salt = f.read()
+        else:
+            self.salt = os.urandom(16)
+            with open(self.salt_file, 'wb') as f:
+                f.write(self.salt)
+
+        # Generate or load key
+        if os.path.exists(self.key_file):
+            with open(self.key_file, 'rb') as f:
+                self.key = f.read()
+        else:
+            # Generate a master key for first-time setup
+            master_password = getpass("Enter master password for encryption: ")
+            self.key = self._generate_key(master_password)
+            with open(self.key_file, 'wb') as f:
+                f.write(self.key)
+        
+        self.fernet = Fernet(self.key)
+
+    def _generate_key(self, password: str) -> bytes:
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=self.salt,
+            iterations=480000,
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
+        return key
 
     def load_users(self):
         if os.path.exists(self.users_file):
-            with open(self.users_file, 'r') as f:
-                self.users = json.load(f)
+            with open(self.users_file, 'rb') as f:
+                encrypted_data = f.read()
+                if encrypted_data:
+                    decrypted_data = self.fernet.decrypt(encrypted_data)
+                    self.users = json.loads(decrypted_data)
+                else:
+                    self.users = {}
         else:
             self.users = {}
 
     def save_users(self):
-        with open(self.users_file, 'w') as f:
-            json.dump(self.users, f, indent=4)
+        encrypted_data = self.fernet.encrypt(json.dumps(self.users).encode())
+        with open(self.users_file, 'wb') as f:
+            f.write(encrypted_data)
 
     def register(self, username: str, password: str) -> bool:
         if username in self.users:
