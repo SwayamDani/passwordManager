@@ -171,3 +171,5 @@ cython_debug/
 .pypirc
 
 src/users.json
+.salt
+.key
