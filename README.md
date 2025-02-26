@@ -1,86 +1,114 @@
 # Password Security Assessment Tool
 
-A cybersecurity project that helps users manage and assess the security of their passwords and online accounts.
+A comprehensive cybersecurity project that helps users manage and assess the security of their passwords and online accounts.
 
 ## Features
 
-- **Password Strength Analysis**: Evaluates passwords based on length, character diversity, and complexity
-- **Data Breach Checking**: Checks if passwords have appeared in known data breaches via the Have I Been Pwned API
-- **Account Management**: Securely stores and manages your account credentials
+### Password Security Analysis
+- **Strength Evaluation**: Advanced algorithm assesses password strength based on length, character diversity, and complexity
+- **Data Breach Checking**: Secure API integration with Have I Been Pwned using k-anonymity
 - **Password Reuse Detection**: Identifies when the same password is used across multiple accounts
-- **2FA Tracking**: Helps you keep track of which accounts have two-factor authentication enabled
-- **Security Recommendations**: Provides actionable advice to improve your password security
+- **Age Tracking**: Monitors how long passwords have been in use and suggests rotation
+
+### Account Management
+- **Encrypted Storage**: All sensitive data is encrypted using Fernet encryption
+- **Secure Credential Storage**: Passwords are never stored in plain text (SHA-256 hashing)
+- **2FA Tracking**: Keep track of which accounts have two-factor authentication enabled
+- **Password Generation**: Create strong, random passwords that meet security requirements
+
+### Modern Interface
+- **Web Dashboard**: Intuitive UI to manage all your accounts and passwords
+- **Visual Security Indicators**: Color-coded security status for all accounts
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Architecture
+
+This project implements a full-stack architecture:
+
+- **Backend**: Python FastAPI REST service with secure password handling
+- **Frontend**: Next.js React application with Material UI components
+- **Database**: File-based encrypted storage system
 
 ## Installation
 
+### Prerequisites
+- Python 3.6+
+- Node.js 18+
+- npm or yarn
+
+### Backend Setup
 1. Clone this repository:
    ```
    git clone https://github.com/yourusername/password-security-assessment.git
    cd password-security-assessment
    ```
 
-2. Install required dependencies:
+2. Set up backend:
    ```
+   cd backend
    pip install -r requirements.txt
+   ```
+
+### Frontend Setup
+1. Install dependencies:
+   ```
+   cd frontend
+   npm install
    ```
 
 ## Usage
 
-Run the main script:
+### Starting the Application
+Use the provided scripts to start both frontend and backend:
+
+#### Windows
 ```
-python password_manager.py
+start.bat
 ```
 
-### First-time Users
-1. Select "2" to register a new account
-2. Enter your desired username and master password
-3. Login with your credentials
+#### macOS/Linux
+```
+chmod +x start.sh
+./start.sh
+```
 
-### Returning Users
-1. Select "1" to login
-2. Enter your username and master password
-
-### Available Options
-After logging in, you can:
-- **Check Password Strength**: Evaluate the security of any password
-- **Check Password Breach**: See if a password has appeared in data breaches
-- **Add Account**: Store credentials for a new service
-- **View Accounts**: List all your stored accounts with security metrics
-- **Edit Accounts**: Update usernames, passwords, or 2FA status
-- **Delete Accounts**: Remove stored accounts
+### Using the Application
+1. Navigate to `http://localhost:3000` in your browser
+2. Register a new account or login with existing credentials
+3. Add and manage your accounts and passwords
+4. Use the password generator to create strong, unique passwords
+5. Monitor security status of all your accounts
 
 ## Security Information
 
 - All passwords are stored as SHA-256 hashes, not in plain text
+- User data files are encrypted using Fernet encryption
 - When checking for breaches, only the first 5 characters of the password hash are sent to the API (k-anonymity)
 - The master password is never stored; only its hash is saved
 
-## Requirements
+## Technical Details
 
-- Python 3.6+
-- Internet connection (for breach checking)
-- Required packages:
-  - requests
-  - hashlib (standard library)
-  - json (standard library)
-  - re (standard library)
-  - getpass (standard library)
+### Backend
+- FastAPI for RESTful API development
+- Python cryptography library for secure encryption
+- Password analysis and security algorithms
 
-## Project Structure
-
-- `password_manager.py` - Main application file
-- `users.json` - Stored user data and account information
-- `requirements.txt` - Required Python packages
+### Frontend
+- Next.js React framework
+- Material UI component library
+- TypeScript for type safety
+- Axios for API communication
 
 ## Future Improvements
 
-- Password generation functionality
-- Export/import capabilities
-- Offline mode for breach checking
-- Enhanced encryption for stored data
-- Browser integration for auto-filling credentials
+- Browser extension for auto-filling credentials
 - Mobile application
+- Enhanced encryption for stored data
+- Offline mode for breach checking
 - Password expiration reminders
+- Export/import capabilities
+- Multi-user support with shared credentials
+- Network security scanning
 
 ## Contributing
 
