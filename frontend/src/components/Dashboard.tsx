@@ -9,15 +9,18 @@ import {
   IconButton,
   Divider,
   Chip,
+  Stack,
 } from '@mui/material';
 import {
   Lock as LockIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Security as SecurityIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
 import AddAccount from './AddAccount';  // Add this import
+import EditAccount from './EditAccount';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -32,12 +35,21 @@ interface Account {
   last_changed: string;
 }
 
+interface AgingPassword {
+  service: string;
+  days_old: number;
+}
+
 export default function Dashboard({ onLogout }: DashboardProps) {
   const [accounts, setAccounts] = useState<Record<string, Account>>({});
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState('');
+  const [agingPasswords, setAgingPasswords] = useState<AgingPassword[]>([]);
 
   useEffect(() => {
     fetchAccounts();
+    fetchAgingPasswords();
   }, []);
 
   const fetchAccounts = async () => {
@@ -47,6 +59,38 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     } catch (error) {
       console.error('Error fetching accounts:', error);
     }
+  };
+
+  const fetchAgingPasswords = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/api/accounts/aging');
+      setAgingPasswords(response.data.aging_passwords);
+    } catch (error) {
+      console.error('Error fetching aging passwords:', error);
+    }
+  };
+
+  const handleEdit = (service: string) => {
+    setSelectedService(service);
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = async (service: string) => {
+    if (window.confirm('Are you sure you want to delete this account?')) {
+      try {
+        await axios.delete(`http://localhost:8000/api/accounts/${service}`);
+        fetchAccounts();
+      } catch (error) {
+        console.error('Error deleting account:', error);
+      }
+    }
+  };
+
+  const getPasswordAge = (lastChanged: string): number => {
+    const lastChangedDate = new Date(lastChanged);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - lastChangedDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   return (
@@ -62,16 +106,47 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         </Button>
       </Box>
 
+      {agingPasswords.length > 0 && (
+        <Box sx={{ mb: 3, p: 2, bgcolor: '#fff3e0', borderRadius: 1 }}>
+          <Typography variant="h6" sx={{ color: '#ed6c02', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon /> Password Update Needed
+          </Typography>
+          <Typography variant="body2">
+            The following accounts have passwords that are over 90 days old:
+          </Typography>
+          <Box sx={{ mt: 1 }}>
+            {agingPasswords.map(({ service, days_old }) => (
+              <Chip
+                key={service}
+                label={`${service} (${days_old} days)`}
+                size="small"
+                color="warning"
+                sx={{ mr: 1, mt: 1 }}
+                onClick={() => handleEdit(service)}
+              />
+            ))}
+          </Box>
+        </Box>
+      )}
+
       <List>
         {Object.entries(accounts).map(([service, account]) => (
           <Box key={service}>
             <ListItem
               secondaryAction={
                 <Box>
-                  <IconButton edge="end" aria-label="edit">
+                  <IconButton 
+                    edge="end" 
+                    aria-label="edit"
+                    onClick={() => handleEdit(service)}
+                  >
                     <EditIcon />
                   </IconButton>
-                  <IconButton edge="end" aria-label="delete">
+                  <IconButton 
+                    edge="end" 
+                    aria-label="delete"
+                    onClick={() => handleDelete(service)}
+                  >
                     <DeleteIcon />
                   </IconButton>
                 </Box>
@@ -85,11 +160,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   </Box>
                 }
                 secondary={
-                  <Box component="div" sx={{ mt: 1 }}>
-                    <Typography component="span" variant="body2" display="block">
+                  <Box component="span" sx={{ display: 'block' }}>
+                    <Typography 
+                      component="span"
+                      variant="body2" 
+                      sx={{ display: 'block', mb: 1 }}
+                    >
                       Username: {account.username}
                     </Typography>
-                    <Box component="div" sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Box component="span" sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Chip
                         size="small"
                         label={`Strength: ${account.password_strength}/5`}
@@ -110,6 +189,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                           color="error"
                         />
                       )}
+                      {getPasswordAge(account.last_changed) >= 90 && (
+                        <Chip
+                          size="small"
+                          icon={<WarningIcon />}
+                          label={`${getPasswordAge(account.last_changed)} days old`}
+                          color="warning"
+                        />
+                      )}
                     </Box>
                   </Box>
                 }
@@ -125,6 +212,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         onClose={() => setAddDialogOpen(false)}
         onAccountAdded={fetchAccounts}
       />
+
+      {selectedService && (
+        <EditAccount
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          onAccountUpdated={fetchAccounts}
+          service={selectedService}
+          initialData={accounts[selectedService]}
+        />
+      )}
 
       <Button
         variant="outlined"

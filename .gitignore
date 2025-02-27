@@ -169,7 +169,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-src/users.json
+users.json
 .salt
 .key
