@@ -172,3 +172,8 @@ cython_debug/
 users.json
 .salt
 .key
+
+# Redis
+dump.rdb
+*.rdb
+redis.log
