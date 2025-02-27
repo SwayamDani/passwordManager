@@ -1,10 +1,21 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from password_manager import UserManager, PasswordAnalyzer, AccountManager
+from rate_limiter import FailsafeRateLimiter, setup_limiter
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
+import redis.asyncio as redis
 
 app = FastAPI(title="Password Manager API")
+rate_limiter = FailsafeRateLimiter()
+
+@app.on_event("startup")
+async def startup():
+    """Initialize rate limiter on startup"""
+    redis_client = await setup_limiter()
+    await rate_limiter.init(redis_client)
 
 # Configure CORS
 app.add_middleware(
@@ -37,14 +48,22 @@ class AccountCreate(BaseModel):
     has_2fa: bool = False
 
 @app.post("/api/login")
-async def login(credentials: UserCredentials):
+async def login(credentials: UserCredentials, request: Request):
+    await rate_limiter.check_rate_limit(request)
+    
     if user_manager.login(credentials.username, credentials.password):
+        await rate_limiter.reset_attempts(request)
         return {"success": True}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @app.post("/api/register")
-async def register(credentials: UserCredentials):
+async def register(credentials: UserCredentials, request: Request):
+    # Check rate limit
+    await rate_limiter.is_rate_limited(request)
+    
     if user_manager.register(credentials.username, credentials.password):
+        # Reset rate limit on successful registration
+        await rate_limiter.reset_attempts(request)
         return {"success": True}
     raise HTTPException(status_code=400, detail="Username already exists")
 
