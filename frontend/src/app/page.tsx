@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import LoginForm from '@/components/LoginForm';
 import Dashboard from '@/components/Dashboard';
+import { theme } from '@/theme';
 
 const darkTheme = createTheme({
   palette: {
@@ -23,7 +24,7 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   return (
-    <ThemeProvider theme={darkTheme}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container maxWidth="lg">
         <Box sx={{ my: 4 }}>
