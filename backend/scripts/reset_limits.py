@@ -1,5 +1,6 @@
 import redis
 import argparse
+from app.config import settings
 
 def reset_rate_limits():
     try:

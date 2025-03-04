@@ -177,3 +177,23 @@ users.json
 dump.rdb
 *.rdb
 redis.log
+
+# Sensitive data
+data/.salt
+data/users.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+eggs/
+*.egg-info/
+
+# VS Code
+.vscode/

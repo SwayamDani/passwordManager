@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +17,7 @@ import {
   Security as SecurityIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../utils/axios';
 import PasswordGenerator from './PasswordGenerator';
 
 interface EditAccountProps {
@@ -61,14 +62,17 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
     e.preventDefault();
     setError('');
     try {
-      await axios.put(`http://localhost:8000/api/accounts/${service}`, {
+      const response = await api.put(`/api/accounts/${service}`, {
         service,
         username,
         password,
         has_2fa: has2FA,
       });
-      onAccountUpdated();
-      onClose();
+      
+      if (response.data.message) {
+        onAccountUpdated();
+        onClose();
+      }
     } catch (error: any) {
       setError(error.response?.data?.detail || 'Failed to update account');
     }
