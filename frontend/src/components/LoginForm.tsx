@@ -8,10 +8,10 @@ import {
   Tab,
   Alert,
 } from '@mui/material';
-import axios from 'axios';
+import api from '../utils/axios';
 
 interface LoginFormProps {
-  onLogin: () => void;
+  onLogin: (token: string, username: string) => void;
 }
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
@@ -26,19 +26,23 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
     try {
       const endpoint = tab === 0 ? '/api/login' : '/api/register';
-      const response = await axios.post(`http://localhost:8000${endpoint}`, {
+      const response = await api.post(`http://localhost:8000${endpoint}`, {
         username,
         password,
       });
 
-      if (response.data.success) {
-        if (tab === 0) {
-          onLogin();
-        } else {
-          setTab(0);
-          setUsername('');
-          setPassword('');
-        }
+      if (tab === 0 && response.data.access_token) {
+        // Store token in localStorage
+        localStorage.setItem('token', response.data.access_token);
+        localStorage.setItem('username', response.data.username);
+        
+        // Update auth state via callback
+        onLogin(response.data.access_token, response.data.username);
+      } else if (tab === 1 && response.data.message) {
+        // Registration successful
+        setTab(0);
+        setUsername('');
+        setPassword('');
       }
     } catch (error: any) {
       setError(error.response?.data?.detail || 'An error occurred');

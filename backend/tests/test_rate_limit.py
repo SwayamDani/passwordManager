@@ -3,6 +3,7 @@ import aiohttp
 import json
 from datetime import datetime
 from typing import Dict, Any
+from app.utils.rate_limiter import LoginRateLimiter
 
 class RateLimitTester:
     def __init__(self):
