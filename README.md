@@ -2,7 +2,7 @@
 
 A comprehensive cybersecurity application that helps users manage and assess the security of their passwords and online accounts. This full-stack solution provides powerful password management features with a focus on security analysis and improvement.
 
-## Features
+## 🔑 Features
 
 ### Password Management
 - **Secure Credential Storage**: All sensitive data is encrypted (SHA-256 hashing for passwords)
@@ -28,7 +28,7 @@ A comprehensive cybersecurity application that helps users manage and assess the
 - **Responsive Design**: Works on desktop and mobile devices
 - **Dark/Light Mode**: Adapts to your system preferences
 
-## Architecture
+## 🔧 Architecture
 
 This project implements a full-stack architecture:
 
@@ -37,7 +37,7 @@ This project implements a full-stack architecture:
 - **Database**: File-based encrypted storage system
 - **Authentication**: JWT-based authentication system
 
-## Security Information
+## 🔒 Security Information
 
 - All passwords are stored as SHA-256 hashes, not in plain text
 - User data files are encrypted
@@ -45,57 +45,61 @@ This project implements a full-stack architecture:
 - The master password is never stored; only its hash is saved
 - Rate limiting is implemented to prevent brute force attacks
 
-## Installation
+## 📋 Prerequisites
 
-### Prerequisites
 - Python 3.9+
 - Node.js 18+
 - npm or yarn
 
-### Backend Setup
-1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/password-security-assessment.git
-   cd password-security-assessment
-   ```
+## 🚀 Installation
 
-2. Set up backend:
-   ```
-   cd backend
-   pip install -r requirements.txt
-   ```
+### Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/password-security-assessment.git
+cd password-security-assessment
+```
+
+### Backend Setup
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
 ### Frontend Setup
-1. Install dependencies:
-   ```
-   cd frontend
-   npm install
-   ```
 
-## Usage
+```bash
+cd frontend
+npm install
+```
+
+## 🎮 Usage
 
 ### Starting the Application
+
 Use the provided scripts to start both frontend and backend:
 
 #### Windows
-```
+```bash
 start.bat
 ```
 
 #### macOS/Linux
-```
+```bash
 chmod +x start.sh
 ./start.sh
 ```
 
 ### Using the Application
+
 1. Navigate to `http://localhost:3000` in your browser
 2. Register a new account or login with existing credentials
 3. Add and manage your accounts and passwords
 4. Use the password generator to create strong, unique passwords
 5. Monitor the security status of all your accounts through the dashboard
 
-## Technical Details
+## 💻 Technical Details
 
 ### Backend
 - FastAPI for RESTful API development
@@ -110,7 +114,7 @@ chmod +x start.sh
 - Axios for API communication
 - Context API for state management
 
-## Future Improvements
+## 🔜 Future Improvements
 
 - Browser extension for auto-filling credentials
 - Mobile application with biometric authentication
@@ -123,7 +127,7 @@ chmod +x start.sh
 - Search and filtering functionality
 - Password history tracking
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -133,10 +137,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
+## 📜 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 This tool is for educational purposes and personal use. While it implements security best practices, no password manager can guarantee complete security. Always maintain backups of your important credentials.
