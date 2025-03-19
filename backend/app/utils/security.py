@@ -3,13 +3,13 @@ from typing import Optional
 from jose import JWTError, jwt
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from app.config import settings
-
-security = HTTPBearer()
+import os
+import secrets
 
 class JWTHandler:
-    def __init__(self):
-        self.secret_key = settings.SECRET_KEY
+    def __init__(self, secret_key: str = None):
+        # Use provided secret key or generate a new one
+        self.secret_key = secret_key or os.getenv('SECRET_KEY') or secrets.token_urlsafe(32)
         self.algorithm = "HS256"
         self.access_token_expire_minutes = 30
 
@@ -29,5 +29,5 @@ class JWTHandler:
                 detail="Invalid authentication credentials"
             )
 
-    async def verify_jwt(self, credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+    async def verify_jwt(self, credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())) -> dict:
         return self.verify_token(credentials.credentials)

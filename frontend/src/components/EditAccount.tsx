@@ -44,7 +44,7 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
     setPassword(newPassword);
     if (newPassword) {
       try {
-        const response = await axios.post('/.netlify/functions/api/password/check', {
+        const response = await axios.post('/api/password/check', {
           password: newPassword
         });
         setPasswordStrength(response.data.strength_score);
