@@ -1,7 +1,14 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api'
+  baseURL: 'https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api',
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  },
 });
 
 // Add request interceptor
