@@ -47,8 +47,12 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
         setPassword('');
         setHas2FA(false);
       }
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Failed to add account');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 
+        typeof error === 'object' && error && 'response' in error ? 
+        (error.response as any)?.data?.detail || 'Failed to add account' : 
+        'Failed to add account';
+      setError(errorMessage);
     }
   };
 
