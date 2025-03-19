@@ -29,7 +29,7 @@ jwt_handler = JWTHandler()
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://password-manager-eight-lovat.vercel.app/", "https://password-manager-swayam-danis-projects.vercel.app/"],
+    allow_origins=["http://localhost:3000", "https://password-manager-eight-lovat.vercel.app", "https://password-manager-swayam-danis-projects.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

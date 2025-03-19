@@ -11,7 +11,7 @@ import {
   Alert,
   Box,
 } from '@mui/material';
-import axios from 'axios';
+import axios from '../utils/axios';
 
 interface AddAccountProps {
   open: boolean;
@@ -25,7 +25,15 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
   const [password, setPassword] = useState('');
   const [has2FA, setHas2FA] = useState(false);
   const [error, setError] = useState('');
-  const [generatorOpen, setGeneratorOpen] = useState(false);  // Add this line
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+
+  const resetForm = () => {
+    setService('');
+    setUsername('');
+    setPassword('');
+    setHas2FA(false);
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,13 +47,11 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
         has_2fa: has2FA,
       });
 
-      if (response.data.success) {
-        onAccountAdded();
+      if (response.status === 200) {
+        console.log('Account added successfully');
+        resetForm();
         onClose();
-        setService('');
-        setUsername('');
-        setPassword('');
-        setHas2FA(false);
+        onAccountAdded();
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 
@@ -56,8 +62,14 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
     }
   };
 
+  // Reset form when dialog closes
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>Add New Account</DialogTitle>
       <form onSubmit={handleSubmit}>
         <DialogContent>
@@ -111,7 +123,7 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={handleClose}>Cancel</Button>
           <Button type="submit" variant="contained" color="primary">
             Add Account
           </Button>
