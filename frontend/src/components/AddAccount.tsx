@@ -32,7 +32,7 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
     setError('');
 
     try {
-      const response = await axios.post('https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api/accounts', {
+      const response = await axios.post('/.netlify/functions/api/accounts', {
         service,
         username,
         password,

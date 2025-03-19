@@ -117,7 +117,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const handleDelete = async (service: string) => {
     if (window.confirm('Are you sure you want to delete this account?')) {
       try {
-        await api.delete(`https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api/accounts/${service}`);
+        await api.delete(`/.netlify/functions/api/accounts/${service}`);
         fetchAccounts();
       } catch (error) {
         console.error('Error deleting account:', error);
