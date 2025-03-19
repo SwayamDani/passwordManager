@@ -1,4 +1,4 @@
-import { Box, Typography, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Typography, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   CheckCircle as CheckCircleIcon,
@@ -20,7 +20,14 @@ interface SecurityInsightsProps {
     reusedPasswords: number;
     twoFactorPercentage: number;
   };
-  accounts: Record<string, any>;
+  accounts: Record<string, {
+    username: string;
+    password: string;
+    password_strength: number;
+    password_breach: boolean;
+    has_2fa: boolean;
+    last_changed: string;
+  }>;
 }
 
 export default function SecurityInsights({ metrics, accounts }: SecurityInsightsProps) {

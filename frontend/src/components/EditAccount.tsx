@@ -73,8 +73,12 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
         onAccountUpdated();
         onClose();
       }
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'Failed to update account');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 
+        typeof error === 'object' && error && 'response' in error ? 
+        (error.response as any)?.data?.detail || 'Failed to update account' : 
+        'Failed to update account';
+      setError(errorMessage);
     }
   };
 
