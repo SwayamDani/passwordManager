@@ -27,11 +27,11 @@ export default function PasswordGenerator({ open, onClose, onSelectPassword }: P
 
   const generatePassword = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/password/generate?length=${length}`);
+      const response = await axios.get(`https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api/password/generate?length=${length}`);
       const password = response.data.password;
       setGeneratedPassword(password);
       
-      const checkResponse = await axios.post('http://localhost:8000/api/password/check', { password });
+      const checkResponse = await axios.post('https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api/password/check', { password });
       setStrength(checkResponse.data.strength_score);
       setIsBreached(checkResponse.data.is_breached);
     } catch (error) {
