@@ -13,7 +13,10 @@ from app.api.routes import app
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://password-manager-eight-lovat.vercel.app/"],  # Update with your Vercel URL
+    allow_origins=[
+        "https://password-manager-eight-lovat.vercel.app",
+        "http://localhost:3000"
+        ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -7,7 +7,7 @@ from app.utils.rate_limiter import LoginRateLimiter
 
 class RateLimitTester:
     def __init__(self):
-        self.url = "http://localhost:8000/api/login"
+        self.url = "https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api/login"
         self.test_data = {"username": "test", "password": "wrong"}
         self.attempts = 7
         self.delay = 1
