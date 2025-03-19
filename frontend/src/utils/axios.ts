@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://celadon-fairy-54d475.netlify.app/.netlify/functions/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://celadon-fairy-54d475.netlify.app/';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
