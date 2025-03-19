@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Create axios instance with base URL
 const api = axios.create({
-  baseURL: 'http://localhost:8000'
+  baseURL: 'https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions/api'
 });
 
 // Add request interceptor
