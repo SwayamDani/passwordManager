@@ -28,11 +28,27 @@ jwt_handler = JWTHandler()
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://celadon-fairy-54d475.netlify.app", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+    
+    # Handle OPTIONS request specifically
+    if request.method == "OPTIONS":
+        return JSONResponse(
+            status_code=200,
+            content={"message": "OK"}
+        )
+    return response
 
 # Add root route
 @app.get("/")
