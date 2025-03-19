@@ -15,12 +15,6 @@ import Dashboard from '@/components/Dashboard';
 import { theme } from '@/theme';
 import axios from 'axios';
 
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-  },
-});
-
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
