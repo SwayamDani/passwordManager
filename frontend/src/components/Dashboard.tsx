@@ -13,6 +13,9 @@ import {
   Tabs,
   Tab,
   Paper,
+  Backdrop,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Lock as LockIcon,
@@ -30,6 +33,7 @@ import api from '../utils/axios';
 import AddAccount from './AddAccount';
 import EditAccount from './EditAccount';
 import SecurityScore from './SecurityScore';
+import CredentialCard from './CredentialCard';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -81,6 +85,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [agingPasswords, setAgingPasswords] = useState<AgingPassword[]>([]);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [selectedTab, setSelectedTab] = useState(0);
+  const [clipboardMessage, setClipboardMessage] = useState('');
+  const [credentialCardOpen, setCredentialCardOpen] = useState(false);
+  const [selectedCredential, setSelectedCredential] = useState<{
+    service: string;
+    username: string;
+    password: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchAccounts();
@@ -90,10 +101,15 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const fetchAccounts = async () => {
     try {
       const response = await api.get('/api/accounts');
-      setAccounts(response.data);
-
-      const agingResponse = await api.get('/api/accounts/aging');
-      setAgingPasswords(agingResponse.data);
+      const accountsData = response.data;
+      setAccounts(accountsData);
+      
+      // Use the fresh data from response, not the stale state
+      if (Object.keys(accountsData).length > 0) {
+        setSelectedTab(0);
+      } else {
+        setSelectedTab(1);
+      }
     } catch (error) {
       console.error('Failed to fetch accounts:', error);
     }
@@ -139,13 +155,23 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (username: string, password: string, service: string) => {
     try {
-      await navigator.clipboard.writeText(text);
-      // You could add a snackbar notification here
+      await navigator.clipboard.writeText(`${username}\t${password}`);
+      
+      // Show success message
+      setClipboardMessage(`Credentials for ${service} copied!`);
+      setTimeout(() => setClipboardMessage(''), 3000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      console.error('Failed to copy credentials:', err);
+      setClipboardMessage('Failed to copy credentials');
+      setTimeout(() => setClipboardMessage(''), 3000);
     }
+  };
+
+  const openCredentialCard = (service: string, username: string, password: string) => {
+    setSelectedCredential({ service, username, password });
+    setCredentialCardOpen(true);
   };
 
   const calculateSecurityMetrics = () => {
@@ -274,29 +300,38 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           {Object.entries(accounts).map(([service, account]) => (
             <Box key={service}>
               <ListItem
+                onClick={() => openCredentialCard(service, account.username, account.password)}
+                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' } }}
                 secondaryAction={
                   <Stack direction="row" spacing={1}>
                     <IconButton 
                       edge="end" 
-                      aria-label="Copy password"
+                      aria-label="Copy credentials"
                       onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard(account.password);
+                        e.stopPropagation(); // Prevent opening the credential card
+                        copyToClipboard(account.username, account.password, service);
                       }}
+                      title="Copy username & password"
                     >
                       <ContentCopyIcon />
                     </IconButton>
                     <IconButton 
                       edge="end" 
                       aria-label={`Edit ${service} account`}
-                      onClick={() => handleEdit(service)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent opening the credential card
+                        handleEdit(service);
+                      }}
                     >
                       <EditIcon />
                     </IconButton>
                     <IconButton 
                       edge="end" 
                       aria-label={`Delete ${service} account`}
-                      onClick={() => handleDelete(service)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent opening the credential card
+                        handleDelete(service);
+                      }}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -311,33 +346,35 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     </Box>
                   }
                   secondary={
-                    <Box component="span" sx={{ display: 'block' }}>
-                      <Typography 
-                        component="span"
-                        variant="body2" 
-                        sx={{ display: 'block', mb: 1 }}
-                      >
-                        Username: {account.username}
-                      </Typography>
-                      <Typography 
-                        component="span"
-                        variant="body2" 
-                        sx={{ display: 'block', mb: 1 }}
-                      >
-                        Password: {visiblePasswords[service] ? account.password : '••••••••'}
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePasswordVisibility(service);
-                          }}
-                          sx={{ ml: 1 }}
-                          aria-label={visiblePasswords[service] ? "Hide password" : "Show password"}
+                    <Box sx={{ display: 'block' }}>
+                      <Box sx={{ display: 'block', mb: 1 }}>
+                        <Typography 
+                          component="span"
+                          variant="body2" 
                         >
-                          {visiblePasswords[service] ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                        </IconButton>
-                      </Typography>
-                      <Box component="span" sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          Username: {account.username}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'block', mb: 1 }}>
+                        <Typography 
+                          component="span"
+                          variant="body2" 
+                        >
+                          Password: {visiblePasswords[service] ? account.password : '••••••••'}
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePasswordVisibility(service);
+                            }}
+                            sx={{ ml: 1 }}
+                            aria-label={visiblePasswords[service] ? "Hide password" : "Show password"}
+                          >
+                            {visiblePasswords[service] ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          </IconButton>
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Chip
                           size="small"
                           label={`Password strength: ${account.password_strength || 0} out of 5`}
@@ -405,6 +442,39 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       >
         Logout
       </Button>
+
+      {clipboardMessage && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            bottom: 20, 
+            right: 20, 
+            bgcolor: 'primary.main', 
+            color: 'white', 
+            p: 2, 
+            borderRadius: 1,
+            zIndex: 1500
+          }}
+        >
+          {clipboardMessage}
+        </Box>
+      )}
+
+      {credentialCardOpen && selectedCredential && (
+        <>
+          <Backdrop
+            sx={{ zIndex: 1200, bgcolor: 'rgba(0, 0, 0, 0.5)' }}
+            open={credentialCardOpen}
+            onClick={() => setCredentialCardOpen(false)}
+          />
+          <CredentialCard
+            service={selectedCredential.service}
+            username={selectedCredential.username}
+            password={selectedCredential.password}
+            onClose={() => setCredentialCardOpen(false)}
+          />
+        </>
+      )}
     </Box>
   );
 }

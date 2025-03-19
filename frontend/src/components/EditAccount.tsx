@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import axios from 'axios';
 import {
   Dialog,
   DialogTitle,
@@ -17,7 +16,7 @@ import {
   Security as SecurityIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import api from '../utils/axios';
+import axios from '../utils/axios';
 import PasswordGenerator from './PasswordGenerator';
 
 interface EditAccountProps {
@@ -62,7 +61,7 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
     e.preventDefault();
     setError('');
     try {
-      const response = await api.put(`/api/accounts/${service}`, {
+      const response = await axios.put(`/api/accounts/${service}`, {
         service,
         username,
         password,
@@ -70,6 +69,7 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
       });
       
       if (response.data.message) {
+        console.log("account updated");
         onAccountUpdated();
         onClose();
       }
