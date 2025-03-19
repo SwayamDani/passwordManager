@@ -1,10 +1,13 @@
 import axios from 'axios';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://celadon-fairy-54d475.netlify.app/.netlify/functions/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
   },
 });
 
