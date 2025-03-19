@@ -44,8 +44,12 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         setUsername('');
         setPassword('');
       }
-    } catch (error: any) {
-      setError(error.response?.data?.detail || 'An error occurred');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 
+        typeof error === 'object' && error && 'response' in error ? 
+        (error.response as any)?.data?.detail || 'An error occurred' : 
+        'An error occurred';
+      setError(errorMessage);
     }
   };
 

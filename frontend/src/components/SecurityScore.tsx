@@ -17,7 +17,14 @@ interface SecurityMetrics {
 
 interface SecurityScoreProps {
   metrics: SecurityMetrics;
-  accounts: Record<string, any>;
+  accounts: Record<string, {
+    username: string;
+    password: string;
+    password_strength: number;
+    password_breach: boolean;
+    has_2fa: boolean;
+    last_changed: string;
+  }>;
 }
 
 export default function SecurityScore({ metrics, accounts }: SecurityScoreProps) {
