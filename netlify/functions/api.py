@@ -15,7 +15,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://password-manager-eight-lovat.vercel.app",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "https://password-manager-psi.vercel.app",
+        "*"
         ], 
     allow_credentials=True,
     allow_methods=["*"],
