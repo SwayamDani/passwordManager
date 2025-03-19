@@ -3,12 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from typing import Dict, List, Optional
+from datetime import datetime
+
+# Import our SQLite database models and managers
 from app.core.password_manager import UserManager, PasswordAnalyzer, AccountManager
-from app.utils.rate_limiter import LoginRateLimiter, FailsafeRateLimiter, setup_limiter
+from app.utils.rate_limiter import FailsafeRateLimiter, setup_limiter
 from app.utils.security import JWTHandler
 from fastapi_limiter import FastAPILimiter
-from fastapi_limiter.depends import RateLimiter
-import redis.asyncio as redis
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -28,7 +29,7 @@ jwt_handler = JWTHandler()
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "https://password-manager-eight-lovat.vercel.app/", "https://password-manager-swayam-danis-projects.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,6 +56,9 @@ class AccountCreate(BaseModel):
     password: str
     has_2fa: bool = False
 
+class PasswordCheck(BaseModel):
+    password: str
+
 @app.post("/api/login")
 async def login(credentials: UserCredentials, request: Request):
     try:
@@ -65,12 +69,18 @@ async def login(credentials: UserCredentials, request: Request):
             access_token = jwt_handler.create_access_token(
                 data={"sub": credentials.username}
             )
-            return {"access_token": access_token, "token_type": "bearer"}
+            return {
+                "access_token": access_token, 
+                "token_type": "bearer", 
+                "username": credentials.username
+            }
         
         raise HTTPException(
             status_code=401,
             detail="Invalid username or password"
         )
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(
             status_code=401,
@@ -111,13 +121,6 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Security(HTTPBe
 async def get_accounts(username: str = Depends(get_current_user)):
     try:
         accounts = account_manager.get_accounts(username)
-        # Add password analysis for each account
-        for account_data in accounts.values():
-            if 'password_strength' not in account_data:
-                strength_score, _ = analyzer.check_strength(account_data['password'])
-                is_breached, _ = analyzer.check_breach(account_data['password'])
-                account_data['password_strength'] = strength_score
-                account_data['password_breach'] = is_breached
         return accounts
     except Exception as e:
         raise HTTPException(
@@ -131,21 +134,27 @@ async def create_account(
     username: str = Depends(get_current_user)
 ):
     try:
-        account_manager.add_account(
+        success = account_manager.add_account(
             username,
             account.service,
             account.username,
             account.password,
             account.has_2fa
         )
-        return {"message": "Account created successfully"}
+        if success:
+            return {"message": "Account created successfully"}
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail="Account already exists for this service"
+            )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/password/check")
-async def check_password(password: str):
-    strength_score, feedback = analyzer.check_strength(password)
-    is_breached, count = analyzer.check_breach(password)
+async def check_password(password_data: PasswordCheck):
+    strength_score, feedback = analyzer.check_strength(password_data.password)
+    is_breached, count = analyzer.check_breach(password_data.password)
     return {
         "strength_score": strength_score,
         "feedback": feedback,
