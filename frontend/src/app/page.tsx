@@ -7,7 +7,6 @@ import {
   Paper,
   Typography,
   ThemeProvider,
-  createTheme,
   CssBaseline
 } from '@mui/material';
 import LoginForm from '@/components/LoginForm';
