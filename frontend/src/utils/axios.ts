@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://celadon-fairy-54d475.netlify.app/';
+const API_BASE_URL = 'https://password-manager-api-swayam-2bf66e3e8142.herokuapp.com/';
+// const API_BASE_URL = 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
   },
 });
 
