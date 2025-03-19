@@ -26,7 +26,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
     try {
       const endpoint = tab === 0 ? '/api/login' : '/api/register';
-      const response = await api.post(`https://deploy-preview-4--celadon-fairy-54d475.netlify.app/.netlify/functions${endpoint}`, {
+      const response = await api.post(`/.netlify/functions${endpoint}`, {
         username,
         password,
       });
