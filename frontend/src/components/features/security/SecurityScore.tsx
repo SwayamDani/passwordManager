@@ -6,25 +6,11 @@ import {
   VpnKey as VpnKeyIcon,
 } from '@mui/icons-material';
 import SecurityInsights from './SecurityInsights';
-
-interface SecurityMetrics {
-  overallScore: number;
-  passwordStrength: number;
-  passwordAge: number;
-  reusedPasswords: number;
-  twoFactorPercentage: number;
-}
+import { Account, SecurityMetrics } from '@/types/account';
 
 interface SecurityScoreProps {
   metrics: SecurityMetrics;
-  accounts: Record<string, {
-    username: string;
-    password: string;
-    password_strength: number;
-    password_breach: boolean;
-    has_2fa: boolean;
-    last_changed: string;
-  }>;
+  accounts: Record<string, Account>;
 }
 
 export default function SecurityScore({ metrics, accounts }: SecurityScoreProps) {

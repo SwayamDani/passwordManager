@@ -3,18 +3,16 @@ import {
   Box,
   TextField,
   Button,
-  Typography,
-  Tabs,
-  Tab,
   Alert,
   Link,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Typography
 } from '@mui/material';
-import { useRouter } from 'next/navigation'; // Changed from next/router to next/navigation
-import api from '../utils/axios';
+import { useRouter } from 'next/navigation';
+import api from '@/utils/axios';
 
 interface LoginFormProps {
   onLogin: (token: string, username: string) => void;
@@ -22,7 +20,6 @@ interface LoginFormProps {
 
 export default function LoginForm({ onLogin }: LoginFormProps) {
   const router = useRouter();
-  const [tab, setTab] = useState(0);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -35,41 +32,26 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
     setError('');
 
     try {
-      if (tab === 0) { // Login
-        // First authenticate with username/password
-        const response = await api.post('/api/login', {
-          username,
-          password,
-        });
+      const response = await api.post('/api/login', {
+        username,
+        password,
+      });
 
-        // Check if 2FA is required
-        if (response.data.status === '2fa_required') {
-          setRequires2FA(true);
-          setIs2FADialogOpen(true);
-          return;
-        }
+      // Check if 2FA is required
+      if (response.data.status === '2fa_required') {
+        setRequires2FA(true);
+        setIs2FADialogOpen(true);
+        return;
+      }
 
-        // If not, proceed with login
-        if (response.data.access_token) {
-          // Store token in localStorage
-          localStorage.setItem('token', response.data.access_token);
-          localStorage.setItem('username', response.data.username);
-          
-          // Update auth state via callback
-          onLogin(response.data.access_token, response.data.username);
-        }
-      } else { // Register
-        const registerResponse = await api.post('/api/register', {
-          username,
-          password,
-        });
+      // If not, proceed with login
+      if (response.data.access_token) {
+        // Store token in localStorage
+        localStorage.setItem('token', response.data.access_token);
+        localStorage.setItem('username', response.data.username);
         
-        if (registerResponse.data.message) {
-          // Registration successful
-          setTab(0);
-          setUsername('');
-          setPassword('');
-        }
+        // Update auth state via callback
+        onLogin(response.data.access_token, response.data.username);
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 
@@ -117,55 +99,47 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: 'auto' }}>
-      <Tabs value={tab} onChange={(e, v) => setTab(v)} centered>
-        <Tab label="Login" />
-        <Tab label="Register" />
-      </Tabs>
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        <TextField
-          fullWidth
-          label="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          margin="normal"
-          required
-        />
-        <TextField
-          fullWidth
-          type="password"
-          label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          margin="normal"
-          required
-        />
-        <Button
-          fullWidth
-          variant="contained"
-          type="submit"
-          sx={{ mt: 3 }}
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      <TextField
+        fullWidth
+        label="Username"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        margin="normal"
+        required
+      />
+      <TextField
+        fullWidth
+        type="password"
+        label="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        margin="normal"
+        required
+      />
+      <Button
+        fullWidth
+        variant="contained"
+        type="submit"
+        sx={{ mt: 3 }}
+      >
+        Login
+      </Button>
+      
+      <Box sx={{ mt: 2, textAlign: 'center' }}>
+        <Link 
+          component="button"
+          variant="body2"
+          onClick={handleForgotPassword}
+          sx={{ cursor: 'pointer' }}
         >
-          {tab === 0 ? 'Login' : 'Register'}
-        </Button>
-        
-        {tab === 0 && (
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Link 
-              component="button"
-              variant="body2"
-              onClick={handleForgotPassword}
-              sx={{ cursor: 'pointer' }}
-            >
-              Forgot password?
-            </Link>
-          </Box>
-        )}
+          Forgot password?
+        </Link>
       </Box>
 
       {/* Two-Factor Authentication Dialog */}
