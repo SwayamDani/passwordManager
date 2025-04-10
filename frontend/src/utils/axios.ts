@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://password-manager-api-swayam-2bf66e3e8142.herokuapp.com/';
-// const API_BASE_URL = 'http://localhost:8000';
+// const API_BASE_URL = 'https://password-manager-api-swayam-2bf66e3e8142.herokuapp.com/';
+const API_BASE_URL = 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
