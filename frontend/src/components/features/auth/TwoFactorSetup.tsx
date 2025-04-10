@@ -4,7 +4,7 @@ import {
   Dialog, DialogActions, DialogContent, DialogTitle, CircularProgress,
   Stepper, Step, StepLabel
 } from '@mui/material';
-import api from '../utils/axios';
+import api from '@/utils/axios';
 
 interface TwoFactorSetupProps {
   userId: number;
