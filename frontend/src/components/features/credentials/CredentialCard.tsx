@@ -1,3 +1,4 @@
+// src/components/features/credentials/CredentialCard.tsx
 import { useState } from 'react';
 import {
   Box,
@@ -8,14 +9,17 @@ import {
   TextField,
   InputAdornment,
   Tooltip,
-  Fade
+  Fade,
+  Divider,
+  useTheme,
 } from '@mui/material';
 import {
   ContentCopy as CopyIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   Check as CheckIcon,
-  Launch as LaunchIcon
+  Launch as LaunchIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 
 interface CredentialCardProps {
@@ -26,6 +30,7 @@ interface CredentialCardProps {
 }
 
 export default function CredentialCard({ service, username, password, onClose }: CredentialCardProps) {
+  const theme = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [usernameCopied, setUsernameCopied] = useState(false);
   const [passwordCopied, setPasswordCopied] = useState(false);
@@ -93,48 +98,72 @@ export default function CredentialCard({ service, username, password, onClose }:
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: { xs: '90%', sm: '400px' },
-          p: 3,
+          width: { xs: '90%', sm: '450px' },
+          p: 0,
           zIndex: 1300,
-          borderRadius: 2
+          borderRadius: 3,
+          overflow: 'hidden'
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">{service} Credentials</Typography>
-          <Tooltip title="Launch website">
-            <IconButton 
-              onClick={() => window.open(getLaunchURL(), '_blank')}
-              color="primary"
-            >
-              <LaunchIcon />
-            </IconButton>
-          </Tooltip>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          p: 3,
+          pb: 2,
+          bgcolor: theme.palette.primary.main,
+          color: 'white'
+        }}>
+          <Typography variant="h5" component="div" fontWeight="medium">
+            {service}
+          </Typography>
+          <Box>
+            <Tooltip title="Visit website">
+              <IconButton 
+                onClick={() => window.open(getLaunchURL(), '_blank')}
+                sx={{ color: 'white' }}
+                size="small"
+              >
+                <LaunchIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Close">
+              <IconButton 
+                onClick={onClose}
+                sx={{ color: 'white', ml: 1 }}
+                size="small"
+              >
+                <CloseIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
         
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>Username</Typography>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Username</Typography>
           <TextField
             fullWidth
             value={username}
+            variant="outlined"
             InputProps={{
               readOnly: true,
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={copyUsername} edge="end">
-                    {usernameCopied ? <CheckIcon color="success" /> : <CopyIcon />}
+                  <IconButton onClick={copyUsername} edge="end" color={usernameCopied ? "success" : "default"}>
+                    {usernameCopied ? <CheckIcon /> : <CopyIcon />}
                   </IconButton>
                 </InputAdornment>
               ),
             }}
+            sx={{ mb: 3 }}
           />
-        </Box>
-        
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>Password</Typography>
+          
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Password</Typography>
           <TextField
             fullWidth
             type={showPassword ? 'text' : 'password'}
             value={password}
+            variant="outlined"
             InputProps={{
               readOnly: true,
               endAdornment: (
@@ -142,26 +171,29 @@ export default function CredentialCard({ service, username, password, onClose }:
                   <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ mr: 0.5 }}>
                     {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                   </IconButton>
-                  <IconButton onClick={copyPassword} edge="end">
-                    {passwordCopied ? <CheckIcon color="success" /> : <CopyIcon />}
+                  <IconButton onClick={copyPassword} edge="end" color={passwordCopied ? "success" : "default"}>
+                    {passwordCopied ? <CheckIcon /> : <CopyIcon />}
                   </IconButton>
                 </InputAdornment>
               ),
             }}
           />
-        </Box>
-        
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Button variant="outlined" onClick={onClose}>
-            Close
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={copyBoth}
-            startIcon={bothCopied ? <CheckIcon /> : <CopyIcon />}
-          >
-            {bothCopied ? 'Copied!' : 'Copy Both'}
-          </Button>
+          
+          <Divider sx={{ my: 3 }} />
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button variant="outlined" onClick={onClose}>
+              Close
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={copyBoth}
+              startIcon={bothCopied ? <CheckIcon /> : <CopyIcon />}
+              color={bothCopied ? "success" : "primary"}
+            >
+              {bothCopied ? 'Copied!' : 'Copy Both'}
+            </Button>
+          </Box>
         </Box>
       </Paper>
     </Fade>
