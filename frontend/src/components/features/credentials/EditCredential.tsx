@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,34 +16,47 @@ import {
   Security as SecurityIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import axios from '../utils/axios';
-import PasswordGenerator from './PasswordGenerator';
+import api from '@/utils/axios';
+import { Account } from '@/types/account';
 
-interface EditAccountProps {
+// We'll need to import the password generator when it's moved to a UI component
+// import PasswordGenerator from '@/components/ui/PasswordGenerator';
+
+interface EditCredentialProps {
   open: boolean;
   onClose: () => void;
   onAccountUpdated: () => void;
   service: string;
-  initialData: {
-    username: string;
-    has_2fa: boolean;
-  };
+  initialData: Account | undefined;
 }
 
-export default function EditAccount({ open, onClose, onAccountUpdated, service, initialData }: EditAccountProps) {
-  const [username, setUsername] = useState(initialData.username);
+export default function EditCredential({ 
+  open, 
+  onClose, 
+  onAccountUpdated, 
+  service, 
+  initialData 
+}: EditCredentialProps) {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [has2FA, setHas2FA] = useState(initialData.has_2fa);
+  const [has2FA, setHas2FA] = useState(false);
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [isBreached, setIsBreached] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (initialData) {
+      setUsername(initialData.username);
+      setHas2FA(initialData.has_2fa);
+    }
+  }, [initialData]);
+
   const handlePasswordChange = async (newPassword: string) => {
     setPassword(newPassword);
     if (newPassword) {
       try {
-        const response = await axios.post('/api/password/check', {
+        const response = await api.post('/api/password/check', {
           password: newPassword
         });
         setPasswordStrength(response.data.strength_score);
@@ -60,8 +73,9 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
     try {
-      const response = await axios.put(`/api/accounts/${service}`, {
+      const response = await api.put(`/api/accounts/${service}`, {
         service,
         username,
         password,
@@ -69,7 +83,6 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
       });
       
       if (response.data.message) {
-        console.log("account updated");
         onAccountUpdated();
         onClose();
       }
@@ -154,11 +167,12 @@ export default function EditAccount({ open, onClose, onAccountUpdated, service, 
           </DialogActions>
         </form>
       </Dialog>
-      <PasswordGenerator
+      {/* Password generator component will be added here when moved to UI components */}
+      {/* <PasswordGenerator
         open={generatorOpen}
         onClose={() => setGeneratorOpen(false)}
         onSelectPassword={(pwd) => handlePasswordChange(pwd)}
-      />
+      /> */}
     </>
   );
 }

@@ -11,15 +11,15 @@ import {
   Alert,
   Box,
 } from '@mui/material';
-import axios from '../utils/axios';
+import api from '@/utils/axios';
 
-interface AddAccountProps {
+interface AddCredentialProps {
   open: boolean;
   onClose: () => void;
   onAccountAdded: () => void;
 }
 
-export default function AddAccount({ open, onClose, onAccountAdded }: AddAccountProps) {
+export default function AddCredential({ open, onClose, onAccountAdded }: AddCredentialProps) {
   const [service, setService] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +40,7 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
     setError('');
 
     try {
-      const response = await axios.post('/api/accounts', {
+      const response = await api.post('/api/accounts', {
         service,
         username,
         password,
@@ -48,7 +48,6 @@ export default function AddAccount({ open, onClose, onAccountAdded }: AddAccount
       });
 
       if (response.status === 200) {
-        console.log('Account added successfully');
         resetForm();
         onClose();
         onAccountAdded();

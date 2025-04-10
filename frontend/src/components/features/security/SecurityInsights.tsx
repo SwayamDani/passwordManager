@@ -6,6 +6,7 @@ import {
   Info as InfoIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
+import { Account, SecurityMetrics } from '@/types/account';
 
 interface SecurityInsight {
   type: 'success' | 'warning' | 'error' | 'info';
@@ -14,20 +15,8 @@ interface SecurityInsight {
 }
 
 interface SecurityInsightsProps {
-  metrics: {
-    passwordStrength: number;
-    passwordAge: number;
-    reusedPasswords: number;
-    twoFactorPercentage: number;
-  };
-  accounts: Record<string, {
-    username: string;
-    password: string;
-    password_strength: number;
-    password_breach: boolean;
-    has_2fa: boolean;
-    last_changed: string;
-  }>;
+  metrics: SecurityMetrics;
+  accounts: Record<string, Account>;
 }
 
 export default function SecurityInsights({ metrics, accounts }: SecurityInsightsProps) {

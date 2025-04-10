@@ -5,61 +5,76 @@ import {
   Box,
   Container,
   Paper,
-  Typography,
   ThemeProvider,
   CssBaseline
 } from '@mui/material';
-import LoginForm from '@/components/LoginForm';
-import Dashboard from '@/components/Dashboard';
+import AuthModule from '@/components/features/auth/AuthModule';
+import Dashboard from '@/components/layouts/Dashboard';
 import { theme } from '@/theme';
-import axios from 'axios';
+import api from '@/utils/axios';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState('');
   const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing token on component mount
-    const token = localStorage.getItem('token');
+    // Check if user is already logged in
+    const storedToken = localStorage.getItem('token');
     const storedUsername = localStorage.getItem('username');
-    if (token && storedUsername) {
+    
+    if (storedToken) {
+      setToken(storedToken);
+      setUsername(storedUsername || '');
       setIsAuthenticated(true);
-      setUsername(storedUsername);
+      
       // Set default Authorization header for all requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
     }
+    
+    setLoading(false);
   }, []);
 
-  const handleLogin = (token: string, username: string) => {
+  const handleLogin = (newToken: string, newUsername: string) => {
+    setToken(newToken);
+    setUsername(newUsername);
     setIsAuthenticated(true);
-    setUsername(username);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Set default Authorization header for all requests
+    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
   };
 
   const handleLogout = () => {
+    setToken('');
+    setUsername('');
+    setIsAuthenticated(false);
+    
+    // Remove token from localStorage and API headers
     localStorage.removeItem('token');
     localStorage.removeItem('username');
-    delete axios.defaults.headers.common['Authorization'];
-    setIsAuthenticated(false);
-    setUsername('');
+    delete api.defaults.headers.common['Authorization'];
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        Loading...
+      </Box>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Container maxWidth="lg">
-        <Box sx={{ my: 4 }}>
-          <Paper sx={{ p: 4 }}>
-            <Typography variant="h4" component="h1" gutterBottom align="center">
-              Password Manager
-            </Typography>
-            {!isAuthenticated ? (
-              <LoginForm onLogin={handleLogin} />
-            ) : (
-              <Dashboard onLogout={handleLogout} />
-            )}
-          </Paper>
-        </Box>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Paper sx={{ p: 4 }}>
+          {isAuthenticated ? (
+            <Dashboard onLogout={handleLogout} />
+          ) : (
+            <AuthModule onLogin={handleLogin} />
+          )}
+        </Paper>
       </Container>
     </ThemeProvider>
   );
