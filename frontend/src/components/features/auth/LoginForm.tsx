@@ -11,9 +11,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Typography
+  Typography,
+  CircularProgress
 } from '@mui/material';
-import api from '@/utils/axios';
+import api, { setAuthToken } from '@/utils/axios';
 import { useRouter } from 'next/navigation';
 
 interface LoginFormProps {
@@ -25,6 +26,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
   const [totpCode, setTotpCode] = useState('');
   const [is2FADialogOpen, setIs2FADialogOpen] = useState(false);
@@ -32,6 +34,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     try {
       const response = await api.post('/api/login', {
@@ -43,13 +46,16 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       if (response.data.status === '2fa_required') {
         setRequires2FA(true);
         setIs2FADialogOpen(true);
+        setIsLoading(false);
         return;
       }
 
       // If not, proceed with login
       if (response.data.access_token) {
-        // Store token and user info in localStorage
-        localStorage.setItem('token', response.data.access_token);
+        // Use our enhanced helper function to ensure the token is properly set
+        setAuthToken(response.data.access_token);
+        
+        // Store other user info in localStorage
         localStorage.setItem('username', response.data.username);
         
         // Store user_id if available
@@ -57,10 +63,21 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           localStorage.setItem('user_id', response.data.user_id);
         }
         
-        // Update auth state via callback
-        onLogin(response.data.access_token, response.data.username);
+        // Give the token a moment to be stored before making subsequent requests
+        setTimeout(() => {
+          // Update auth state via callback
+          onLogin(response.data.access_token, response.data.username);
+          
+          // Verify token is working by making a test request
+          api.get('/api/accounts')
+            .then(() => console.debug('Authentication verified'))
+            .catch(err => console.warn('Test request failed:', err));
+            
+          setIsLoading(false);
+        }, 100);
       }
     } catch (error: unknown) {
+      setIsLoading(false);
       const errorMessage = error instanceof Error ? error.message : 
         typeof error === 'object' && error && 'response' in error ? 
         (error.response as any)?.data?.detail || 'An error occurred' : 
@@ -70,6 +87,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   const handleVerify2FA = async () => {
+    setIsLoading(true);
     try {
       // Submit the TOTP code to complete login
       const response = await api.post('/auth/login', {
@@ -84,8 +102,10 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         setTotpCode('');
         setRequires2FA(false);
         
-        // Store token and user info in localStorage
-        localStorage.setItem('token', response.data.access_token);
+        // Use our enhanced helper function to ensure the token is properly set
+        setAuthToken(response.data.access_token);
+        
+        // Store other user info in localStorage
         localStorage.setItem('username', response.data.username);
         
         // Store user_id if available
@@ -93,10 +113,21 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           localStorage.setItem('user_id', response.data.user_id);
         }
         
-        // Update auth state via callback
-        onLogin(response.data.access_token, response.data.username);
+        // Give the token a moment to be stored before making subsequent requests
+        setTimeout(() => {
+          // Update auth state via callback
+          onLogin(response.data.access_token, response.data.username);
+          
+          // Verify token is working by making a test request
+          api.get('/api/accounts')
+            .then(() => console.debug('Authentication verified'))
+            .catch(err => console.warn('Test request failed:', err));
+            
+          setIsLoading(false);
+        }, 100);
       }
     } catch (error: unknown) {
+      setIsLoading(false);
       const errorMessage = error instanceof Error ? error.message : 
         typeof error === 'object' && error && 'response' in error ? 
         (error.response as any)?.data?.detail || 'Invalid authentication code' : 
@@ -124,6 +155,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         onChange={(e) => setUsername(e.target.value)}
         margin="normal"
         required
+        disabled={isLoading}
       />
       <TextField
         fullWidth
@@ -133,14 +165,16 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         onChange={(e) => setPassword(e.target.value)}
         margin="normal"
         required
+        disabled={isLoading}
       />
       <Button
         fullWidth
         variant="contained"
         type="submit"
         sx={{ mt: 3 }}
+        disabled={isLoading}
       >
-        Login
+        {isLoading ? <CircularProgress size={24} /> : 'Login'}
       </Button>
       
       <Box sx={{ mt: 2, textAlign: 'center' }}>
@@ -149,13 +183,14 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           variant="body2"
           onClick={handleForgotPassword}
           sx={{ cursor: 'pointer' }}
+          disabled={isLoading}
         >
           Forgot password?
         </Link>
       </Box>
 
       {/* Two-Factor Authentication Dialog */}
-      <Dialog open={is2FADialogOpen} onClose={() => setIs2FADialogOpen(false)}>
+      <Dialog open={is2FADialogOpen} onClose={() => !isLoading && setIs2FADialogOpen(false)}>
         <DialogTitle>Two-Factor Authentication Required</DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 2 }}>
@@ -169,16 +204,17 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             value={totpCode}
             onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
             inputProps={{ maxLength: 6, pattern: '[0-9]*' }}
+            disabled={isLoading}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIs2FADialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setIs2FADialogOpen(false)} disabled={isLoading}>Cancel</Button>
           <Button 
             onClick={handleVerify2FA}
-            disabled={!totpCode || totpCode.length !== 6}
+            disabled={!totpCode || totpCode.length !== 6 || isLoading}
             variant="contained"
           >
-            Verify
+            {isLoading ? <CircularProgress size={24} /> : 'Verify'}
           </Button>
         </DialogActions>
       </Dialog>

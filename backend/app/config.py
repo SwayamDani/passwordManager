@@ -18,6 +18,9 @@ class Settings(BaseSettings):
 
     # Generate a static SECRET_KEY
     SECRET_KEY: str = secrets.token_urlsafe(32)
+    
+    # JWT Secret key for authentication - use environment variable for consistency across restarts
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
 
     # Updated CORS settings to allow specific frontend URL
     CORS_ORIGINS: List[str] = ["https://password-manager-eight-lovat.vercel.app"]

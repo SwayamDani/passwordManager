@@ -21,3 +21,4 @@ pyotp
 qrcode[pil]
 pillow
 python-dotenv
+argon2-cffi
