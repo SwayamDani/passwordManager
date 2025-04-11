@@ -7,7 +7,6 @@ from datetime import datetime
 
 # Import our refactored SOLID components
 from app.core.password_manager import PasswordManager, PasswordManagerFactory
-from app.utils.rate_limiter import FailsafeRateLimiter, setup_limiter
 from app.utils.security import JWTHandler
 from fastapi_limiter import FastAPILimiter
 from contextlib import asynccontextmanager
@@ -32,18 +31,7 @@ def get_db():
 # Import email sending from auth module for password reset
 from app.api.auth import send_email
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    redis_client = await setup_limiter()
-    await rate_limiter.init(redis_client)
-    yield
-    # Shutdown
-    if redis_client:
-        await redis_client.close()
-
-app = FastAPI(title="Password Manager API", lifespan=lifespan)
-rate_limiter = FailsafeRateLimiter()
+app = FastAPI(title="Password Manager API")
 jwt_handler = JWTHandler()
 
 # Setup CORS
@@ -102,13 +90,11 @@ class PasswordResetRequest(BaseModel):
 @app.post("/api/login")
 async def login(credentials: UserCredentials, request: Request):
     try:
-        await rate_limiter.check_rate_limit(request)
         
         # Get user ID along with authentication
         user_id = password_manager.login(credentials.username, credentials.password)
         
         if user_id:
-            await rate_limiter.reset_attempts(request)
             access_token = jwt_handler.create_access_token(
                 data={"sub": credentials.username}
             )
@@ -134,13 +120,11 @@ async def login(credentials: UserCredentials, request: Request):
 @app.post("/api/register")
 async def register(credentials: UserCredentials, request: Request):
     try:
-        await rate_limiter.check_rate_limit(request)
         
         # Modified to capture user ID
         user_id = password_manager.create_user(credentials.username, credentials.password)
         
         if user_id:
-            await rate_limiter.reset_attempts(request)
             return {
                 "message": "User created successfully",
                 "user_id": user_id
