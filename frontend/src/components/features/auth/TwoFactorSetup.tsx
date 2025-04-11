@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Box, Button, TextField, Typography, Alert, Paper, Container,
-  Dialog, DialogActions, DialogContent, DialogTitle, CircularProgress,
-  Stepper, Step, StepLabel
+   Box, Button, TextField, Typography, Alert, Paper,
+  CircularProgress, Stepper, Step, StepLabel
 } from '@mui/material';
 import api from '@/utils/axios';
+import { useRouter } from 'next/navigation';
 
 interface TwoFactorSetupProps {
-  userId: number;
+  userId: number | string;
   onComplete?: () => void;
 }
 
 const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({ userId, onComplete }) => {
+  const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -22,17 +23,41 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({ userId, onComplete }) =
 
   const steps = ['Generate Secret', 'Scan QR Code', 'Verify Code'];
 
+  // Check if user is authenticated
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('You must be logged in to set up 2FA');
+      return;
+    }
+  }, []);
+
   const generateSecret = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const response = await api.post('/auth/2fa/setup', { user_id: userId });
+      // Use the API TOTP generate endpoint instead of auth/2fa/setup
+      const response = await api.post('/api/totp/generate');
       setQrCode(response.data.qr_code);
       setSecret(response.data.secret);
       setActiveStep(1); // Move to next step
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to set up 2FA. Please try again.');
+      console.error('2FA Setup Error:', err);
+      // Provide more detailed error information
+      let errorMessage = 'Failed to set up 2FA. Please try again.';
+      if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log out and log in again.';
+        // Redirect to login if unauthorized
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          router.push('/');
+        }, 3000);
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -44,18 +69,44 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({ userId, onComplete }) =
       return;
     }
 
+    // Check if token exists before making the request
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Authentication token missing. Please log in again.');
+      setTimeout(() => router.push('/'), 3000);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
     try {
-      await api.post('/auth/2fa/verify', { token: verificationCode });
+      // Pass token in the request body
+      await api.post('/api/totp/verify', { token: verificationCode });
+      
       setSuccess(true);
       setActiveStep(2); // Move to final step
       if (onComplete) {
         onComplete();
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Verification failed. Please check your code and try again.');
+      console.error('2FA Verification Error:', err);
+      // Provide more detailed error information
+      let errorMessage = 'Verification failed. Please check your code and try again.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Your session has expired. Please log in again.';
+        // Redirect to login after a delay
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          router.push('/');
+        }, 3000);
+      } else if (err.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -69,13 +120,13 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({ userId, onComplete }) =
   }, []);
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-        <Typography variant="h5" component="h2" gutterBottom>
+    <Box sx={{ width: '100%' }}>
+      <Paper elevation={3} sx={{ p: 3, mt: 2 }}>
+        <Typography variant="h6" component="h2" gutterBottom>
           Set Up Two-Factor Authentication
         </Typography>
 
-        <Stepper activeStep={activeStep} sx={{ mb: 4, mt: 2 }}>
+        <Stepper activeStep={activeStep} sx={{ mb: 3, mt: 2 }}>
           {steps.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
@@ -180,7 +231,7 @@ const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({ userId, onComplete }) =
           </Box>
         )}
       </Paper>
-    </Container>
+    </Box>
   );
 };
 
