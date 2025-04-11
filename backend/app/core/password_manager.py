@@ -1,385 +1,137 @@
 """
-Core Password Manager module with SQLite database integration.
-This module handles user management, password analysis, and account management
-using SQLAlchemy and SQLite instead of JSON files.
+Core Password Manager module integrating all components following SOLID principles.
+This module serves as the main entry point for the password manager functionality.
 """
 
-import re
-import hashlib
-import requests
-from typing import Dict, List, Tuple, Optional
-import json
-import os
-from datetime import datetime, timedelta
-import random
-import string
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
-from sqlalchemy.exc import IntegrityError
-from .models import User, Account, setup_database
+from .interfaces import IUserManager, IAccountManager, IPasswordAnalyzer, ICryptoProvider
+from .user_manager import SQLUserManager
+from .account_manager import SQLAccountManager
+from .password_analyzer import PasswordAnalyzer
+from .crypto import FernetCryptoProvider
 
-# Initialize database
-engine, SessionLocal = setup_database()
 
-class UserManager:
-    """Manages user authentication and user data using SQLite database."""
+class PasswordManagerFactory:
+    """Factory for creating password manager components."""
     
-    def __init__(self):
-        self.salt_length = 32
-        self._current_user = None
-        
-    @property
-    def current_user(self) -> Optional[str]:
-        return self._current_user
-        
-    @current_user.setter
-    def current_user(self, username: str):
-        self._current_user = username
+    @staticmethod
+    def create_crypto_provider() -> ICryptoProvider:
+        """Create and return a crypto provider."""
+        return FernetCryptoProvider()
     
-    def get_user_accounts(self, username: str) -> Dict:
-        """Get all accounts for a user from the database."""
-        with SessionLocal() as db:
-            user = db.query(User).filter(User.username == username).first()
-            if not user:
-                return {}
-                
-            accounts_dict = {}
-            for account in user.accounts:
-                accounts_dict[account.service] = {
-                    'username': account.username,
-                    'password': account.password,
-                    'has_2fa': account.has_2fa,
-                    'last_changed': account.last_changed.isoformat(),
-                    'password_strength': account.password_strength,
-                    'password_breach': account.password_breach
-                }
-            return accounts_dict
+    @staticmethod
+    def create_user_manager(crypto_provider: ICryptoProvider = None) -> IUserManager:
+        """Create and return a user manager."""
+        if crypto_provider is None:
+            crypto_provider = PasswordManagerFactory.create_crypto_provider()
+        return SQLUserManager(crypto_provider)
     
-    def hash_password(self, password: str, salt: bytes) -> str:
-        """Hash a password with the provided salt."""
-        password_bytes = password.encode()
-        hash_obj = hashlib.sha256()
-        hash_obj.update(salt)
-        hash_obj.update(password_bytes)
-        return hash_obj.hexdigest()
+    @staticmethod
+    def create_password_analyzer() -> IPasswordAnalyzer:
+        """Create and return a password analyzer."""
+        return PasswordAnalyzer()
+    
+    @staticmethod
+    def create_account_manager(
+        user_manager: IUserManager = None,
+        password_analyzer: IPasswordAnalyzer = None,
+        crypto_provider: ICryptoProvider = None
+    ) -> IAccountManager:
+        """Create and return an account manager."""
+        if crypto_provider is None:
+            crypto_provider = PasswordManagerFactory.create_crypto_provider()
+        if user_manager is None:
+            user_manager = PasswordManagerFactory.create_user_manager(crypto_provider)
+        if password_analyzer is None:
+            password_analyzer = PasswordManagerFactory.create_password_analyzer()
+        return SQLAccountManager(user_manager, password_analyzer, crypto_provider)
+
+
+class PasswordManager:
+    """Main password manager class integrating all components."""
+    
+    def __init__(
+        self,
+        user_manager: IUserManager = None,
+        account_manager: IAccountManager = None,
+        password_analyzer: IPasswordAnalyzer = None,
+        crypto_provider: ICryptoProvider = None
+    ):
+        # Use the factory to create components if not provided
+        self.crypto_provider = crypto_provider or PasswordManagerFactory.create_crypto_provider()
+        self.user_manager = user_manager or PasswordManagerFactory.create_user_manager(self.crypto_provider)
+        self.password_analyzer = password_analyzer or PasswordManagerFactory.create_password_analyzer()
+        self.account_manager = account_manager or PasswordManagerFactory.create_account_manager(
+            self.user_manager,
+            self.password_analyzer,
+            self.crypto_provider
+        )
+    
+    # User management methods delegated to user_manager
     
     def create_user(self, username: str, password: str) -> bool:
-        """Create a new user in the database."""
-        try:
-            with SessionLocal() as db:
-                # Check if user already exists
-                existing_user = db.query(User).filter(User.username == username).first()
-                if existing_user:
-                    return False
-                
-                # Generate salt and hash password
-                salt = os.urandom(self.salt_length)
-                password_hash = self.hash_password(password, salt)
-                
-                # Create new user
-                new_user = User(
-                    username=username,
-                    password=password_hash,
-                    salt=salt.hex()  # Store salt as hex string
-                )
-                
-                db.add(new_user)
-                db.commit()
-                return True
-        except Exception as e:
-            print(f"Error creating user: {e}")
-            return False
+        """Create a new user."""
+        return self.user_manager.create_user(username, password)
     
     def login(self, username: str, password: str) -> bool:
-        """Verify login credentials."""
-        try:
-            with SessionLocal() as db:
-                user = db.query(User).filter(User.username == username).first()
-                if not user:
-                    return False
-                
-                # Verify password
-                salt = bytes.fromhex(user.salt)
-                password_hash = self.hash_password(password, salt)
-                
-                if password_hash == user.password:
-                    self._current_user = username
-                    return True
-                return False
-        except Exception as e:
-            print(f"Error during login: {e}")
-            return False
+        """Authenticate a user."""
+        return self.user_manager.login(username, password)
     
     def delete_user(self, username: str) -> bool:
-        """Delete a user from the database."""
-        try:
-            with SessionLocal() as db:
-                user = db.query(User).filter(User.username == username).first()
-                if not user:
-                    return False
-                
-                db.delete(user)
-                db.commit()
-                return True
-        except Exception as e:
-            print(f"Error deleting user: {e}")
-            return False
-
-
-class PasswordAnalyzer:
-    """Analyzes password strength and checks for breaches."""
+        """Delete a user."""
+        return self.user_manager.delete_user(username)
     
-    def __init__(self):
-        self.min_length = 8
-        self.api_url = "https://api.pwnedpasswords.com/range/"
+    def generate_totp_secret(self, username: str) -> str:
+        """Generate a TOTP secret for a user."""
+        return self.user_manager.generate_totp_secret(username)
+    
+    def get_totp_qr_code(self, username: str) -> str:
+        """Get the QR code for TOTP setup."""
+        return self.user_manager.get_totp_qr_code(username)
+    
+    def verify_totp(self, username: str, token: str) -> bool:
+        """Verify a TOTP token."""
+        return self.user_manager.verify_totp(username, token)
+    
+    def is_totp_enabled(self, username: str) -> bool:
+        """Check if TOTP is enabled for a user."""
+        return self.user_manager.is_totp_enabled(username)
+    
+    def disable_totp(self, username: str) -> bool:
+        """Disable TOTP for a user."""
+        return self.user_manager.disable_totp(username)
+    
+    # Account management methods delegated to account_manager
+    
+    def get_accounts(self, username: str) -> dict:
+        """Get all accounts for a user."""
+        return self.account_manager.get_accounts(username)
+    
+    def check_password_age(self, username: str) -> list:
+        """Check for passwords that are too old."""
+        return self.account_manager.check_password_age(username)
+    
+    def add_account(self, username: str, service: str, account_username: str, password: str, has_2fa: bool = False) -> bool:
+        """Add a new account."""
+        return self.account_manager.add_account(username, service, account_username, password, has_2fa)
+    
+    def update_account(self, username: str, service: str, new_username: str = None, new_password: str = None, new_has_2fa: bool = None) -> bool:
+        """Update an existing account."""
+        return self.account_manager.update_account(username, service, new_username, new_password, new_has_2fa)
+    
+    def delete_account(self, username: str, service: str) -> bool:
+        """Delete an account."""
+        return self.account_manager.delete_account(username, service)
+    
+    # Password analysis methods delegated to password_analyzer
     
     def generate_password(self, length: int = 16) -> str:
         """Generate a secure random password."""
-        if length < self.min_length:
-            length = self.min_length
-            
-        lowercase = string.ascii_lowercase
-        uppercase = string.ascii_uppercase
-        digits = string.digits
-        special = "!@#$%^&*(),.?\":{}|<>_"
-        
-        # Ensure at least one character from each category
-        password = [
-            random.choice(lowercase),
-            random.choice(uppercase),
-            random.choice(digits),
-            random.choice(special)
-        ]
-        
-        # Fill the rest with random chars from all categories
-        all_chars = lowercase + uppercase + digits + special
-        password.extend(random.choice(all_chars) for _ in range(length - 4))
-        
-        # Shuffle the password characters
-        random.shuffle(password)
-        return ''.join(password)
+        return self.password_analyzer.generate_password(length)
     
-    def check_strength(self, password: str) -> Tuple[int, List[str]]:
-        """Check the strength of a password and return a score and feedback."""
-        score = 0
-        feedback = []
-        
-        # Check length
-        if len(password) >= self.min_length:
-            score += 1
-        else:
-            feedback.append(f"Password should be at least {self.min_length} characters long")
-        
-        # Check for uppercase letters
-        if re.search(r'[A-Z]', password):
-            score += 1
-        else:
-            feedback.append("Add uppercase letters")
-        
-        # Check for lowercase letters
-        if re.search(r'[a-z]', password):
-            score += 1
-        else:
-            feedback.append("Add lowercase letters")
-        
-        # Check for digits
-        if re.search(r'\d', password):
-            score += 1
-        else:
-            feedback.append("Add numbers")
-        
-        # Check for special characters
-        if re.search(r'[!@#$%^&*(),.?":{}|<>_]', password):
-            score += 1
-        else:
-            feedback.append("Add special characters")
-        
-        return score, feedback
+    def check_password_strength(self, password: str) -> tuple:
+        """Check the strength of a password."""
+        return self.password_analyzer.check_strength(password)
     
-    def check_breach(self, password: str) -> Tuple[bool, int]:
+    def check_password_breach(self, password: str) -> tuple:
         """Check if a password has been exposed in data breaches."""
-        # Hash the password with SHA-1
-        sha1_hash = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
-        hash_prefix = sha1_hash[:5]
-        hash_suffix = sha1_hash[5:]
-        
-        try:
-            # Query the Pwned Passwords API with k-anonymity
-            response = requests.get(self.api_url + hash_prefix)
-            if response.status_code == 200:
-                hashes = (line.split(':') for line in response.text.splitlines())
-                for h, count in hashes:
-                    if h == hash_suffix:
-                        return True, int(count)
-            return False, 0
-        except requests.RequestException:
-            # Fail gracefully if the API is not available
-            return False, 0
-
-
-class AccountManager:
-    """Manages user account data in the SQLite database."""
-    
-    def __init__(self, user_manager: UserManager):
-        self.user_manager = user_manager
-        self.analyzer = PasswordAnalyzer()
-    
-    def get_accounts(self, username: str) -> Dict:
-        """Get all accounts for a user."""
-        return self.user_manager.get_user_accounts(username)
-    
-    def check_password_age(self, username: str) -> List[Dict]:
-        """Check for passwords older than 90 days."""
-        aging_passwords = []
-        try:
-            with SessionLocal() as db:
-                user = db.query(User).filter(User.username == username).first()
-                if not user:
-                    return []
-                
-                current_time = datetime.utcnow()
-                ninety_days_ago = current_time - timedelta(days=90)
-                
-                old_accounts = db.query(Account).filter(
-                    and_(
-                        Account.user_id == user.id,
-                        Account.last_changed < ninety_days_ago
-                    )
-                ).all()
-                
-                for account in old_accounts:
-                    days_old = (current_time - account.last_changed).days
-                    aging_passwords.append({
-                        "service": account.service,
-                        "days_old": days_old
-                    })
-                    
-                return aging_passwords
-        except Exception as e:
-            print(f"Error checking password age: {e}")
-            return []
-    
-    def add_account(
-        self, 
-        username: str, 
-        service: str, 
-        account_username: str, 
-        password: str, 
-        has_2fa: bool = False
-    ) -> bool:
-        """Add a new account for a user."""
-        try:
-            with SessionLocal() as db:
-                user = db.query(User).filter(User.username == username).first()
-                if not user:
-                    return False
-                
-                # Check if service already exists for this user
-                existing_account = db.query(Account).filter(
-                    and_(
-                        Account.user_id == user.id,
-                        Account.service == service
-                    )
-                ).first()
-                
-                if existing_account:
-                    return False
-                
-                # Check password strength and breaches
-                strength_score, _ = self.analyzer.check_strength(password)
-                is_breached, _ = self.analyzer.check_breach(password)
-                
-                # Create new account
-                new_account = Account(
-                    user_id=user.id,
-                    service=service,
-                    username=account_username,
-                    password=password,
-                    has_2fa=has_2fa,
-                    last_changed=datetime.utcnow(),
-                    password_strength=strength_score,
-                    password_breach=is_breached
-                )
-                
-                db.add(new_account)
-                db.commit()
-                return True
-        except IntegrityError:
-            # Handle unique constraint violation
-            return False
-        except Exception as e:
-            print(f"Error adding account: {e}")
-            return False
-    
-    def update_account(
-        self,
-        username: str,
-        service: str,
-        new_username: str = None,
-        new_password: str = None,
-        new_has_2fa: bool = None
-    ) -> bool:
-        """Update an existing account for a user."""
-        try:
-            with SessionLocal() as db:
-                user = db.query(User).filter(User.username == username).first()
-                if not user:
-                    return False
-                
-                account = db.query(Account).filter(
-                    and_(
-                        Account.user_id == user.id,
-                        Account.service == service
-                    )
-                ).first()
-                
-                if not account:
-                    return False
-                
-                # Update account fields if provided
-                if new_username is not None:
-                    account.username = new_username
-                
-                if new_password is not None:
-                    account.password = new_password
-                    account.last_changed = datetime.utcnow()
-                    
-                    # Update password analysis
-                    strength_score, _ = self.analyzer.check_strength(new_password)
-                    is_breached, _ = self.analyzer.check_breach(new_password)
-                    account.password_strength = strength_score
-                    account.password_breach = is_breached
-                
-                if new_has_2fa is not None:
-                    account.has_2fa = new_has_2fa
-                
-                db.commit()
-                return True
-        except Exception as e:
-            print(f"Error updating account: {e}")
-            return False
-    
-    def delete_account(self, username: str, service: str) -> bool:
-        """Delete an account for a user."""
-        try:
-            with SessionLocal() as db:
-                user = db.query(User).filter(User.username == username).first()
-                if not user:
-                    return False
-                
-                account = db.query(Account).filter(
-                    and_(
-                        Account.user_id == user.id,
-                        Account.service == service
-                    )
-                ).first()
-                
-                if not account:
-                    return False
-                
-                db.delete(account)
-                db.commit()
-                return True
-        except Exception as e:
-            print(f"Error deleting account: {e}")
-            return False
+        return self.password_analyzer.check_breach(password)

@@ -17,6 +17,7 @@ import {
   Drawer,
   List,
   ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Divider,
@@ -171,38 +172,48 @@ export default function Navbar({ username, onLogout }: NavbarProps) {
       </Box>
       <Divider />
       <List>
-        <ListItem button onClick={() => navigateTo('/')}>
-          <ListItemIcon>
-            <DashboardIcon color="primary" />
-          </ListItemIcon>
-          <ListItemText primary="Dashboard" />
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigateTo('/')}>
+            <ListItemIcon>
+              <DashboardIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText primary="Dashboard" />
+          </ListItemButton>
         </ListItem>
-        <ListItem button onClick={() => window.dispatchEvent(new CustomEvent('openAddAccountDialog'))}>
-          <ListItemIcon>
-            <LockIcon color="secondary" />
-          </ListItemIcon>
-          <ListItemText primary="Add Account" />
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => window.dispatchEvent(new CustomEvent('openAddAccountDialog'))}>
+            <ListItemIcon>
+              <LockIcon color="secondary" />
+            </ListItemIcon>
+            <ListItemText primary="Add Account" />
+          </ListItemButton>
         </ListItem>
-        <ListItem button onClick={() => navigateTo('/')}>
-          <ListItemIcon>
-            <AnalyticsIcon color="info" />
-          </ListItemIcon>
-          <ListItemText primary="Security Score" />
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigateTo('/')}>
+            <ListItemIcon>
+              <AnalyticsIcon color="info" />
+            </ListItemIcon>
+            <ListItemText primary="Security Score" />
+          </ListItemButton>
         </ListItem>
       </List>
       <Divider />
       <List>
-        <ListItem button onClick={() => navigateTo('/settings')}>
-          <ListItemIcon>
-            <SettingsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Settings" />
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => navigateTo('/settings')}>
+            <ListItemIcon>
+              <SettingsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Settings" />
+          </ListItemButton>
         </ListItem>
-        <ListItem button onClick={handleLogout} sx={{ color: theme.palette.error.main }}>
-          <ListItemIcon>
-            <LogoutIcon color="error" />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
+        <ListItem disablePadding>
+          <ListItemButton onClick={handleLogout} sx={{ color: theme.palette.error.main }}>
+            <ListItemIcon>
+              <LogoutIcon color="error" />
+            </ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItemButton>
         </ListItem>
       </List>
     </Box>
