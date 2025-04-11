@@ -1,4 +1,10 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
+
+// Extend the InternalAxiosRequestConfig type to include our custom properties
+interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _url?: string;
+  _retry?: boolean;
+}
 
 const API_BASE_URL = 'https://password-manager-backend-5d228fef3683.herokuapp.com/';
 // const API_BASE_URL = 'http://localhost:8000';
@@ -53,7 +59,7 @@ const api = axios.create({
 });
 
 // Add request interceptor with improved token handling
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config: CustomAxiosRequestConfig) => {
   // Get token directly on each request to ensure latest token is used
   const token = getAuthToken();
   
@@ -78,7 +84,7 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as CustomAxiosRequestConfig;
     
     // Special case for settings endpoint - silently handle error
     if (error.response?.status === 401 && 

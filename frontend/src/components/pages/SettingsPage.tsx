@@ -307,7 +307,7 @@ export default function SettingsPage() {
                   />
                 </ListItem>
                 
-                <ListItem button onClick={() => window.dispatchEvent(new CustomEvent('openProfilePage'))}>
+                <ListItem component="div" onClick={() => window.dispatchEvent(new CustomEvent('openProfilePage'))} sx={{ cursor: 'pointer' }}>
                   <ListItemIcon>
                     <AccountCircleIcon />
                   </ListItemIcon>
