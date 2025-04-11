@@ -10,8 +10,9 @@ import {
   Switch,
   Alert,
   Box,
+  CircularProgress,
 } from '@mui/material';
-import api from '@/utils/axios';
+import api, { setAuthToken } from '@/utils/axios';
 
 interface AddCredentialProps {
   open: boolean;
@@ -25,6 +26,7 @@ export default function AddCredential({ open, onClose, onAccountAdded }: AddCred
   const [password, setPassword] = useState('');
   const [has2FA, setHas2FA] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [generatorOpen, setGeneratorOpen] = useState(false);
 
   const resetForm = () => {
@@ -38,8 +40,18 @@ export default function AddCredential({ open, onClose, onAccountAdded }: AddCred
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     try {
+      // First, ensure we're using the latest token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('You must be logged in to add an account');
+      }
+      
+      // Reapply the token to the headers before making the request
+      setAuthToken(token);
+      
       const response = await api.post('/api/accounts', {
         service,
         username,
@@ -58,6 +70,14 @@ export default function AddCredential({ open, onClose, onAccountAdded }: AddCred
         (error.response as any)?.data?.detail || 'Failed to add account' : 
         'Failed to add account';
       setError(errorMessage);
+      
+      // Check if the error is due to authentication
+      if (typeof error === 'object' && error && 'response' in error && 
+          (error.response as any)?.status === 401) {
+        setError('Authentication error. Please try logging in again.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -122,9 +142,14 @@ export default function AddCredential({ open, onClose, onAccountAdded }: AddCred
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button type="submit" variant="contained" color="primary">
-            Add Account
+          <Button onClick={handleClose} disabled={isLoading}>Cancel</Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            disabled={isLoading}
+          >
+            {isLoading ? <CircularProgress size={24} /> : 'Add Account'}
           </Button>
         </DialogActions>
       </form>

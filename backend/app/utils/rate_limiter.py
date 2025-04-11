@@ -11,6 +11,7 @@ import threading
 import time
 import logging
 import asyncio
+import ssl
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,78 +30,117 @@ class LoginRateLimiter:
     async def setup(self):
         """Initialize Redis connection"""
         try:
-            self.redis_client = redis.Redis(
-                host='localhost',
-                port=6379,
-                decode_responses=True
-            )
+            # Use Heroku Redis URL if available, fallback to local config
+            redis_url = os.getenv('REDIS_URL', None)
+            if (redis_url):
+                # Create an SSL context that doesn't verify certificates
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                
+                self.redis_client = redis.from_url(
+                    redis_url, 
+                    decode_responses=True,
+                    ssl_cert_reqs=None  # Disable certificate verification
+                )
+            else:
+                self.redis_client = redis.Redis(
+                    host=settings.REDIS_HOST,
+                    port=settings.REDIS_PORT,
+                    decode_responses=True
+                )
             await self.redis_client.ping()
             return True
         except redis.ConnectionError as e:
-            print(f"Redis connection error: {e}")
+            logger.error(f"Redis connection error: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error connecting to Redis: {e}")
             return False
 
     async def check_rate_limit(self, request: Request) -> bool:
         if not self.redis_client:
-            await self.setup()
+            # If Redis is not available, skip rate limiting
+            return True
 
-        ip = request.client.host
-        attempts_key = f"login:{ip}:attempts"
-        lockout_key = f"login:{ip}:lockout"
+        try:
+            ip = request.client.host
+            attempts_key = f"login:{ip}:attempts"
+            lockout_key = f"login:{ip}:lockout"
 
-        # Check if user is locked out
-        if await self.redis_client.exists(lockout_key):
-            ttl = await self.redis_client.ttl(lockout_key)
-            raise HTTPException(
-                status_code=429,
-                detail=f"Account locked. Try again in {ttl} seconds"
-            )
+            # Check if user is locked out
+            if await self.redis_client.exists(lockout_key):
+                ttl = await self.redis_client.ttl(lockout_key)
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Account locked. Try again in {ttl} seconds"
+                )
 
-        # Get attempt count
-        attempts = await self.redis_client.get(attempts_key)
-        attempts = int(attempts) if attempts else 0
+            # Get attempt count
+            attempts = await self.redis_client.get(attempts_key)
+            attempts = int(attempts) if attempts else 0
 
-        if attempts >= self.config.LOGIN_MAX_ATTEMPTS:
-            # Set lockout
+            if attempts >= self.config.LOGIN_MAX_ATTEMPTS:
+                # Set lockout
+                await self.redis_client.setex(
+                    lockout_key,
+                    self.config.LOCKOUT_DURATION,
+                    1
+                )
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Too many attempts. Account locked for {self.config.LOCKOUT_DURATION} seconds"
+                )
+
+            # Increment attempts
             await self.redis_client.setex(
-                lockout_key,
-                self.config.LOCKOUT_DURATION,
-                1
+                attempts_key,
+                self.config.LOGIN_WINDOW,
+                attempts + 1
             )
-            raise HTTPException(
-                status_code=429,
-                detail=f"Too many attempts. Account locked for {self.config.LOCKOUT_DURATION} seconds"
-            )
-
-        # Increment attempts
-        await self.redis_client.setex(
-            attempts_key,
-            self.config.LOGIN_WINDOW,
-            attempts + 1
-        )
-        return True
+            return True
+        except redis.RedisError as e:
+            logger.warning(f"Redis error in rate limit check: {e}, allowing request")
+            return True
 
     async def reset_attempts(self, request: Request):
         """Reset attempts after successful login"""
         if not self.redis_client:
-            await self.setup()
+            return
         
-        ip = request.client.host
-        await self.redis_client.delete(f"login:{ip}:attempts")
+        try:
+            ip = request.client.host
+            await self.redis_client.delete(f"login:{ip}:attempts")
+        except redis.RedisError as e:
+            logger.warning(f"Redis error in reset attempts: {e}")
 
 async def setup_limiter():
     """Initialize Redis connection"""
     try:
-        redis_client = redis.Redis(
-            host='localhost',
-            port=6379,
-            decode_responses=True
-        )
+        # Use Heroku Redis URL if available, fallback to local config
+        redis_url = os.getenv('REDIS_URL', None)
+        if redis_url:
+            logger.info(f"Connecting to Redis using URL from environment")
+            
+            # Skip certificate verification for Heroku Redis
+            redis_client = redis.from_url(
+                redis_url, 
+                decode_responses=True,
+                ssl_cert_reqs=None  # This disables certificate verification
+            )
+        else:
+            logger.info(f"Connecting to Redis at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+            redis_client = redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                decode_responses=True
+            )
         await redis_client.ping()
-        logger.info("✓ Connected to Memurai successfully")
+        logger.info("✓ Connected to Redis successfully")
         return redis_client
     except Exception as e:
-        logger.error(f"✗ Memurai connection failed: {e}")
+        logger.error(f"✗ Redis connection failed: {e}")
+        logger.info("Continuing without Redis - rate limiting will be disabled")
         return None
 
 class FailsafeRateLimiter:
@@ -113,7 +153,10 @@ class FailsafeRateLimiter:
 
     async def init(self, redis_client: redis.Redis):
         self.redis = redis_client
-        logger.info("✓ Connected to Memurai successfully")
+        if redis_client:
+            logger.info("✓ Rate limiter initialized with Redis")
+        else:
+            logger.warning("⚠ Rate limiter running without Redis - limited functionality")
 
     async def check_rate_limit(self, request: Request) -> bool:
         """Check if request is rate limited"""
@@ -137,8 +180,8 @@ class FailsafeRateLimiter:
             await self.redis.incr(key)
             return True
             
-        except redis.RedisError:
-            logger.warning("⚠ Redis error - failsafe mode active")
+        except redis.RedisError as e:
+            logger.warning(f"⚠ Redis error - failsafe mode active: {e}")
             return True
 
     async def reset_attempts(self, request: Request):
@@ -149,5 +192,5 @@ class FailsafeRateLimiter:
         key = f"{self.prefix}{request.client.host}"
         try:
             await self.redis.delete(key)
-        except redis.RedisError:
-            logger.warning("⚠ Redis error - could not reset attempts")
+        except redis.RedisError as e:
+            logger.warning(f"⚠ Redis error - could not reset attempts: {e}")

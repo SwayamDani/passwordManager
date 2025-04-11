@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, Depends, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
 # Import our refactored SOLID components
@@ -165,6 +165,29 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Security(HTTPBe
     if username is None:
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     return username
+
+# Add a combined dependency that gets both the authenticated user and DB session
+# This helps with endpoints that need both user authentication and database access
+async def get_authenticated_user_and_db(token: HTTPAuthorizationCredentials = Security(HTTPBearer())):
+    """
+    Get both the authenticated username and a database session.
+    Reduces code duplication and ensures consistent auth for DB-dependent endpoints.
+    """
+    try:
+        # Verify the token and extract username
+        payload = jwt_handler.verify_token(token.credentials)
+        username = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        
+        # Get a database session
+        db = SessionLocal()
+        try:
+            yield (username, db)
+        finally:
+            db.close()
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
 # Example of a protected route
 @app.get("/api/accounts")
@@ -344,8 +367,10 @@ async def get_totp_status(username: str = Depends(get_current_user)):
 
 # User settings endpoints
 @app.get("/api/user/settings", response_model=UserSettings)
-async def get_user_settings(username: str = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_user_settings(user_data = Depends(get_authenticated_user_and_db)):
     """Get the current user's settings"""
+    username, db = user_data
+    
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -360,10 +385,11 @@ async def get_user_settings(username: str = Depends(get_current_user), db: Sessi
 @app.put("/api/user/email")
 async def update_user_email(
     email_data: UserEmail,
-    username: str = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    user_data = Depends(get_authenticated_user_and_db)
 ):
     """Update the user's email address"""
+    username, db = user_data
+    
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

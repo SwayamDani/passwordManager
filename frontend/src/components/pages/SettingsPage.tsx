@@ -98,19 +98,19 @@ export default function SettingsPage() {
       try {
         setIsLoading(true);
         
-        // In a real application, you would fetch this from your API
-        // const response = await api.get('/api/user/settings');
+        // Make an actual API call with proper error handling in axios interceptor
+        const response = await api.get('/api/user/settings');
         
-        // For now, let's simulate a network request with setTimeout
-        setTimeout(() => {
-          // Mock data
-          setIs2FAEnabled(false);
+        // Use real data from API or fallback values if not available
+        if (response.data) {
+          setIs2FAEnabled(response.data.totp_enabled || false);
           setDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
-          
-          setIsLoading(false);
-        }, 800);
+        }
         
+        setIsLoading(false);
       } catch (err) {
+        // Error handling is now in the axios interceptor
+        // This will only be triggered for non-401 errors
         console.error('Failed to load settings:', err);
         setError('Failed to load settings. Please try again later.');
         setIsLoading(false);
@@ -164,27 +164,23 @@ export default function SettingsPage() {
     try {
       setIsLoading(true);
       
-      // In a real application, you would call your API
-      // await api.post('/api/user/settings', {
-      //   email_notifications: emailNotifications,
-      //   security_alerts: securityAlerts,
-      //   password_expiry_reminders: passwordExpiryReminders,
-      //   data_breach_alerts: dataBreachAlerts,
-      //   dark_mode: darkMode,
-      //   compact_view: compactView,
-      //   auto_logout_time: autoLogoutTime,
-      //   remember_device: rememberDevice
-      // });
+      // Make an actual API call
+      await api.put('/api/user/settings', {
+        darkMode,
+        compactView,
+        emailNotifications,
+        securityAlerts,
+        passwordExpiryReminders,
+        dataBreachAlerts,
+        autoLogoutTime,
+        rememberDevice
+      });
       
-      // Mock successful settings update
-      setTimeout(() => {
-        setSuccess('Settings saved successfully');
-        setIsLoading(false);
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(''), 3000);
-      }, 800);
+      setSuccess('Settings saved successfully');
+      setIsLoading(false);
       
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error('Failed to save settings:', err);
       setError('Failed to save settings. Please try again later.');

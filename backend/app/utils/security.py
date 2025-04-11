@@ -9,6 +9,16 @@ import hashlib
 from argon2 import PasswordHasher
 from app.core.models import User
 from app.core.database import SessionLocal
+import base64
+import logging
+from app.config import settings
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize Argon2 password hasher
+ph = PasswordHasher()
 
 # Secret key for JWT
 SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_urlsafe(32)
@@ -35,27 +45,48 @@ def decode_token(token: str):
         )
 
 class JWTHandler:
-    def __init__(self, secret_key: str = None):
-        # Use provided secret key or generate a new one
-        self.secret_key = secret_key or os.getenv('SECRET_KEY') or secrets.token_urlsafe(32)
+    def __init__(self):
+        self.secret_key = settings.JWT_SECRET_KEY
         self.algorithm = "HS256"
-        self.access_token_expire_minutes = 30
+        self.access_token_expire_minutes = 60  # 1 hour
 
     def create_access_token(self, data: dict) -> str:
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire_minutes)
+        expires_delta = timedelta(minutes=self.access_token_expire_minutes)
+        expire = datetime.utcnow() + expires_delta
         to_encode.update({"exp": expire})
-        return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+        encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+        return encoded_jwt
 
     def verify_token(self, token: str) -> dict:
         try:
+            # First attempt: standard verification
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            
+            # Validate expiration time specifically to provide better error messages
+            if 'exp' in payload:
+                exp_timestamp = payload['exp']
+                current_timestamp = datetime.utcnow().timestamp()
+                
+                if current_timestamp > exp_timestamp:
+                    logger.warning(f"Token expired: exp={exp_timestamp}, now={current_timestamp}")
+                    raise HTTPException(status_code=401, detail="Token has expired")
+            
+            # Validate that the subject claim exists
+            if 'sub' not in payload:
+                logger.warning("Token missing 'sub' claim")
+                raise HTTPException(status_code=401, detail="Invalid token format")
+                
             return payload
-        except JWTError:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid authentication credentials"
-            )
+        except jwt.ExpiredSignatureError:
+            logger.warning("Token has expired signature")
+            raise HTTPException(status_code=401, detail="Token has expired")
+        except JWTError as e:
+            logger.warning(f"Invalid token: {str(e)}")
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        except Exception as e:
+            logger.error(f"Unexpected error verifying token: {str(e)}")
+            raise HTTPException(status_code=401, detail="Authentication error")
 
     async def verify_jwt(self, credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())) -> dict:
         return self.verify_token(credentials.credentials)
@@ -63,19 +94,42 @@ class JWTHandler:
 # Password handling functions
 def generate_salt() -> str:
     """Generate a random salt for password hashing"""
-    return os.urandom(32).hex()
+    return base64.b64encode(os.urandom(16)).decode('utf-8')
 
 def get_password_hash(password: str, salt: str) -> str:
-    """Hash a password with Argon2"""
-    hasher = PasswordHasher()
-    return hasher.hash(password + salt)
+    """
+    Hash a password with Argon2 if available, falling back to SHA-256
+    
+    This function combines the provided salt with the password
+    to generate a secure hash.
+    """
+    try:
+        # Try to use Argon2 for better security
+        combined = (password + salt).encode('utf-8')
+        return ph.hash(combined)
+    except Exception as e:
+        # Fall back to SHA-256 if Argon2 fails
+        logger.warning(f"Argon2 hashing failed: {e}, using SHA-256 fallback")
+        hash_obj = hashlib.sha256()
+        hash_obj.update((password + salt).encode('utf-8'))
+        return hash_obj.hexdigest()
 
 def verify_password(plain_password: str, hashed_password: str, salt: str) -> bool:
-    """Verify a password against its hash"""
-    hasher = PasswordHasher()
+    """
+    Verify a password against its hash using Argon2 if the hash is in Argon2 format,
+    otherwise fall back to SHA-256
+    """
     try:
-        return hasher.verify(hashed_password, plain_password + salt)
+        # Check if hash looks like an Argon2 hash (starts with $argon2)
+        if hashed_password.startswith('$argon2'):
+            combined = (plain_password + salt).encode('utf-8')
+            ph.verify(hashed_password, combined)
+            return True
+        else:
+            # Fall back to SHA-256 verification
+            return get_password_hash(plain_password, salt) == hashed_password
     except Exception:
+        # If verification fails, return False
         return False
 
 # User authentication
