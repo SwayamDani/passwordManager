@@ -114,6 +114,71 @@ chmod +x start.sh
 - Axios for API communication
 - Context API for state management
 
+## PostgreSQL Migration
+
+This application supports both SQLite (for local development) and PostgreSQL (for production/Heroku deployment). To migrate from SQLite to PostgreSQL:
+
+### Local PostgreSQL Setup
+
+1. Install PostgreSQL on your local machine or use a cloud-hosted PostgreSQL instance
+2. Create a new database for the password manager
+3. Set the `DATABASE_URL` environment variable:
+
+```bash
+# macOS/Linux
+export DATABASE_URL=postgresql://username:password@localhost:5432/password_manager
+
+# Windows
+set DATABASE_URL=postgresql://username:password@localhost:5432/password_manager
+```
+
+4. Run the migration script to transfer data from SQLite to PostgreSQL:
+
+```bash
+cd backend
+python scripts/migrate_to_postgres.py
+```
+
+5. Start the application:
+
+```bash
+./start.sh  # or start.bat on Windows
+```
+
+### Heroku PostgreSQL Setup
+
+1. Install the Heroku CLI and log in
+2. Create a new Heroku app (if you haven't already):
+
+```bash
+heroku create your-password-manager-app
+```
+
+3. Add the PostgreSQL add-on:
+
+```bash
+heroku addons:create heroku-postgresql:mini
+```
+
+4. Deploy your app to Heroku:
+
+```bash
+git push heroku main
+```
+
+5. Migrate your data (optional - if you have existing data to transfer):
+
+```bash
+# Set your Heroku PostgreSQL URL locally
+export DATABASE_URL=$(heroku config:get DATABASE_URL)
+
+# Run the migration script
+cd backend
+python scripts/migrate_to_postgres.py
+```
+
+The application will automatically use the PostgreSQL database when deployed to Heroku.
+
 ## 🔜 Future Improvements
 
 - Browser extension for auto-filling credentials

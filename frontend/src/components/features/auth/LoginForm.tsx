@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react';
 import {
   Box,
@@ -11,8 +13,8 @@ import {
   DialogActions,
   Typography
 } from '@mui/material';
-import { useRouter } from 'next/navigation';
 import api from '@/utils/axios';
+import { useRouter } from 'next/navigation';
 
 interface LoginFormProps {
   onLogin: (token: string, username: string) => void;
@@ -46,9 +48,14 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
       // If not, proceed with login
       if (response.data.access_token) {
-        // Store token in localStorage
+        // Store token and user info in localStorage
         localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('username', response.data.username);
+        
+        // Store user_id if available
+        if (response.data.user_id) {
+          localStorage.setItem('user_id', response.data.user_id);
+        }
         
         // Update auth state via callback
         onLogin(response.data.access_token, response.data.username);
@@ -77,10 +84,14 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         setTotpCode('');
         setRequires2FA(false);
         
-        // Store token in localStorage
+        // Store token and user info in localStorage
         localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('username', response.data.username);
-        localStorage.setItem('user_id', response.data.user_id);
+        
+        // Store user_id if available
+        if (response.data.user_id) {
+          localStorage.setItem('user_id', response.data.user_id);
+        }
         
         // Update auth state via callback
         onLogin(response.data.access_token, response.data.username);
@@ -95,6 +106,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
   };
 
   const handleForgotPassword = () => {
+    // Navigate to the forgot password page using Next.js router
     router.push('/forgot-password');
   };
 

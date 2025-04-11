@@ -1,26 +1,28 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
 from datetime import datetime
-import os
-
-Base = declarative_base()
+from .database import Base, engine
 
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     salt = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    totp_secret = Column(String, nullable=True)  # Secret for TOTP-based 2FA
+    totp_enabled = Column(Boolean, default=False)  # Whether 2FA is enabled
+    email = Column(String, nullable=True)  # Email for password reset
+    reset_token = Column(String, nullable=True)  # Store password reset token
+    reset_token_expires = Column(DateTime, nullable=True)  # Token expiration
     
     accounts = relationship("Account", back_populates="user", cascade="all, delete-orphan")
 
 class Account(Base):
     __tablename__ = 'accounts'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     service = Column(String, nullable=False)
     username = Column(String, nullable=False)
@@ -31,19 +33,7 @@ class Account(Base):
     password_breach = Column(Boolean, default=False)
     
     user = relationship("User", back_populates="accounts")
-    
-    __table_args__ = (
-        {'sqlite_autoincrement': True},
-    )
 
-def setup_database(db_path='password_manager.db'):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(base_dir, '..', '..', 'data', db_path)
-    
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    
-    engine = create_engine(f'sqlite:///{db_path}')
+def create_tables():
+    """Create all database tables if they don't exist"""
     Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine)
-    
-    return engine, SessionLocal

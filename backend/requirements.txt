@@ -16,4 +16,8 @@ pytest
 pytest-asyncio
 httpx
 psycopg2-binary>=2.9.3
-sqlalchemy>=1.4.0   
+sqlalchemy>=1.4.0
+pyotp
+qrcode[pil]
+pillow
+python-dotenv
