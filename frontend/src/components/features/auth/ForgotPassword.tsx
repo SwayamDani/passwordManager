@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react';
 import {
   Box,
@@ -22,8 +24,7 @@ export default function ForgotPassword() {
     
     try {
       await api.post('/api/reset-password-request', {
-        username,
-        email
+        username_or_email: email || username // Use email if provided, otherwise use username
       });
       setSubmitted(true);
     } catch (error: unknown) {

@@ -17,7 +17,7 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import TwoFactorSetup from '@/components/TwoFactorSetup';
+import TwoFactorSetup from '@/components/features/auth/TwoFactorSetup';
 import api from '../../utils/axios';
 import { useRouter } from 'next/navigation';
 

@@ -45,6 +45,7 @@ import SecurityScore from '@/components/features/security/SecurityScore';
 import AddCredential from '@/components/features/credentials/AddCredential';
 import EditCredential from '@/components/features/credentials/EditCredential';
 import CredentialCard from '@/components/features/credentials/CredentialCard';
+import ProfileSetupPrompt from '@/components/features/auth/ProfileSetupPrompt';
 import { Account, AgingPassword, SecurityMetrics } from '@/types/account';
 
 interface DashboardProps {
@@ -71,18 +72,30 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  // New states for profile setup
+  const [profileSetupOpen, setProfileSetupOpen] = useState(false);
+  const [userId, setUserId] = useState<number | string>('');
+  const [userProfile, setUserProfile] = useState<{
+    email: string | null;
+    totp_enabled: boolean;
+  }>({ email: null, totp_enabled: false });
   
   const isMenuOpen = Boolean(anchorEl);
 
   useEffect(() => {
-    // Get username from localStorage
+    // Get username and user_id from localStorage
     const storedUsername = localStorage.getItem('username');
+    const storedUserId = localStorage.getItem('user_id');
     if (storedUsername) {
       setUsername(storedUsername);
+    }
+    if (storedUserId) {
+      setUserId(storedUserId);
     }
     
     fetchAccounts();
     fetchAgingPasswords();
+    fetchUserProfile();
 
     // Handle the custom event for opening add account dialog
     const handleOpenAddDialog = () => setAddDialogOpen(true);
@@ -92,6 +105,21 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       window.removeEventListener('openAddAccountDialog', handleOpenAddDialog);
     };
   }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await api.get('/api/user/settings');
+      setUserProfile(response.data);
+      
+      // Check if we need to show the profile setup prompt
+      const needsProfileSetup = !response.data.email || !response.data.totp_enabled;
+      if (needsProfileSetup) {
+        setProfileSetupOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
+  };
 
   const fetchAccounts = async () => {
     try {
@@ -615,6 +643,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </>
         )}
       </Container>
+
+      {/* Profile Setup Prompt */}
+      <ProfileSetupPrompt 
+        open={profileSetupOpen} 
+        onClose={() => setProfileSetupOpen(false)}
+        userId={userId}
+      />
     </>
   );
 }
