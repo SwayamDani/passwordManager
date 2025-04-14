@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from .interfaces import IUserManager, ICryptoProvider
 from .database import SessionLocal
 from .models import User
+from app.utils.security import verify_password as security_verify_password
 
 
 class SQLUserManager(IUserManager):
@@ -58,9 +59,19 @@ class SQLUserManager(IUserManager):
         return self.password_hasher.hash(password)
 
     def verify_password(self, hashed_password: str, plain_password: str) -> bool:
-        """Verify a password against its Argon2 hash."""
+        """Verify a password against its hash."""
         try:
-            return self.password_hasher.verify(hashed_password, plain_password)
+            # First try to verify using Argon2
+            try:
+                return self.password_hasher.verify(hashed_password, plain_password)
+            except Exception:
+                # If Argon2 verification fails, try the security module's verify_password
+                # Get the user's salt first
+                with SessionLocal() as db:
+                    user = db.query(User).filter(User.password == hashed_password).first()
+                    if user and user.salt:
+                        return security_verify_password(plain_password, hashed_password, user.salt)
+                return False
         except Exception:
             return False
     
@@ -135,7 +146,24 @@ class SQLUserManager(IUserManager):
                 return None
             
             # Get the user's salt
-            salt = bytes.fromhex(user.salt)
+            try:
+                # Try to convert from hex string (for newer users)
+                if user.salt:  # Check if salt exists
+                    try:
+                        salt = bytes.fromhex(user.salt)
+                    except ValueError:
+                        # For existing users where salt might be stored differently
+                        salt = user.salt.encode() if isinstance(user.salt, str) else user.salt
+                else:
+                    # If salt is None, generate a new one
+                    salt = os.urandom(16)
+                    # Save the new salt to the user
+                    user.salt = salt.hex()
+                    db.commit()
+            except Exception as e:
+                print(f"Error processing salt: {e}")
+                # Fallback to a default salt
+                salt = os.urandom(16)
             
             # Generate key using crypto provider
             key, _ = self.crypto_provider.generate_key(password, salt)

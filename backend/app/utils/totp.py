@@ -56,7 +56,7 @@ class PasswordReset:
     @staticmethod
     def get_token_expiration() -> datetime:
         """Get expiration time for reset token (30 minutes from now)"""
-        return datetime.utcnow() + timedelta(minutes=1)
+        return datetime.utcnow() + timedelta(minutes=100)
     
     @staticmethod
     def is_token_valid(expiration_time: datetime) -> bool:

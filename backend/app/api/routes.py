@@ -28,8 +28,8 @@ def get_db():
     finally:
         db.close()
 
-# Import email sending from auth module for password reset
-from app.api.auth import send_email
+# Import email sending from utils module for password reset
+from app.utils.email import send_email
 
 app = FastAPI(title="Password Manager API")
 jwt_handler = JWTHandler()

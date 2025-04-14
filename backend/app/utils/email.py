@@ -1,12 +1,12 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import logging
+import os
 from app.config import settings
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
 
 def send_email(to_email: str, subject: str, content: str) -> bool:
     """
-    Send email using the configured SMTP server
+    Send email using Brevo API instead of SMTP
     
     Args:
         to_email: Recipient email address
@@ -17,31 +17,41 @@ def send_email(to_email: str, subject: str, content: str) -> bool:
         bool: True if email was sent successfully, False otherwise
     """
     try:
-        # Create message
-        message = MIMEMultipart()
-        message["From"] = settings.SMTP_FROM_EMAIL
-        message["To"] = to_email
-        message["Subject"] = subject
-
-        # Add body to email
-        message.attach(MIMEText(content, "html"))
+        # Configure API key authorization
+        api_key = os.getenv("BREVO_API_KEY", settings.BREVO_API_KEY)
+        from_email = os.getenv("SMTP_FROM_EMAIL", settings.SMTP_FROM_EMAIL)
+        sender_name = "Password Manager"
         
-        # Connect to SMTP server
-        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-            # Start TLS for security
-            server.starttls()
-            
-            # Login to account - use FROM_EMAIL for username with Gmail
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            
-            # Send email
-            server.send_message(message)
-            
-        logging.info(f"Email sent successfully to {to_email}")
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key['api-key'] = api_key
+        
+        # Create an instance of the TransactionalEmailsApi
+        api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+        
+        # Create the sender
+        sender = {"name": sender_name, "email": from_email}
+        
+        # Create the recipient
+        to = [{"email": to_email}]
+        
+        # Create the email request
+        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+            to=to,
+            sender=sender,
+            subject=subject,
+            html_content=content
+        )
+        
+        # Send the email
+        logging.info(f"Sending email to {to_email} via Brevo API")
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        logging.info(f"Email sent successfully to {to_email} with message ID: {api_response.message_id}")
         return True
+    except ApiException as e:
+        logging.error(f"API Exception when sending email: {e}")
+        return False
     except Exception as e:
         logging.error(f"Failed to send email: {str(e)}")
-        # Don't raise exception to prevent leaking information
         return False
 
 def send_password_reset_email(email: str, token: str) -> bool:

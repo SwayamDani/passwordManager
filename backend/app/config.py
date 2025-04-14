@@ -25,12 +25,15 @@ class Settings(BaseSettings):
     # Updated CORS settings to allow specific frontend URL
     CORS_ORIGINS: List[str] = ["https://password-manager-eight-lovat.vercel.app"]
     
-    # SMTP Configuration for Gmail
-    SMTP_SERVER: str = "smtp.gmail.com"
+    # SMTP Configuration for Brevo (formerly SendinBlue)
+    SMTP_SERVER: str = "smtp-relay.brevo.com"
     SMTP_PORT: int = 587
-    SMTP_USERNAME: str = os.getenv("SMTP_FROM_EMAIL", "your_email@gmail.com")
-    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "your_email@gmail.com")
+    SMTP_USERNAME: str = os.getenv("SMTP_USERNAME", "your_brevo_account_email")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "passwordmanager@swayamdani.com")
+    
+    # Brevo API Key for direct API access
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
     
     # Frontend URL for constructing links
     # Use vercel deployment URL or localhost for development

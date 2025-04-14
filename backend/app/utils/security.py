@@ -23,7 +23,7 @@ ph = PasswordHasher()
 # Secret key for JWT
 SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours instead of 30 minutes
 
 # Standalone functions for JWT (in addition to the JWTHandler class)
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -48,7 +48,7 @@ class JWTHandler:
     def __init__(self):
         self.secret_key = settings.JWT_SECRET_KEY
         self.algorithm = "HS256"
-        self.access_token_expire_minutes = 60  # 1 hour
+        self.access_token_expire_minutes = 1440  # 24 hours instead of 60 minutes
 
     def create_access_token(self, data: dict) -> str:
         to_encode = data.copy()
@@ -105,6 +105,7 @@ def get_password_hash(password: str, salt: str) -> str:
     """
     try:
         # Try to use Argon2 for better security
+        print (password)
         combined = (password + salt).encode('utf-8')
         return ph.hash(combined)
     except Exception as e:
