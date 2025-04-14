@@ -1,8 +1,17 @@
+<<<<<<< HEAD
 requests
 uvicorn
 fastapi
 cryptography
 redis>=4.2.0rc1,<5.0.0
+=======
+fastapi
+uvicorn
+gunicorn
+requests
+cryptography
+redis
+>>>>>>> 949fb09fb18e247f403e5f2fea1a9f7d0d907e6c
 fastapi-limiter
 pydantic
 pydantic-settings
@@ -10,7 +19,21 @@ python-jose
 passlib
 python-multipart
 aiohttp
+<<<<<<< HEAD
 pytest
 pytest-asyncio
 httpx
 mangum
+=======
+mangum
+pytest
+pytest-asyncio
+httpx
+psycopg2-binary>=2.9.3
+sqlalchemy>=1.4.0
+pyotp
+qrcode[pil]
+pillow
+python-dotenv
+argon2-cffi
+>>>>>>> 949fb09fb18e247f403e5f2fea1a9f7d0d907e6c

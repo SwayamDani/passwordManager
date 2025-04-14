@@ -188,7 +188,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-.env/
+env/
 build/
 develop-eggs/
 dist/
@@ -197,3 +197,5 @@ eggs/
 
 # VS Code
 .vscode/
+# Local Netlify folder
+.netlify
