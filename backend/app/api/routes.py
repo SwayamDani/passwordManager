@@ -28,7 +28,10 @@ jwt_handler = JWTHandler()
 # Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://password-manager-eight-lovat.vercel.app",  # Your Vercel frontend
+        "http://localhost:3000",  # For local development
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

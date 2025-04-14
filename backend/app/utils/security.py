@@ -7,8 +7,8 @@ import os
 import secrets
 import hashlib
 from argon2 import PasswordHasher
-from app.core.models import User
-from app.core.database import SessionLocal
+from core.models import User
+from core.database import SessionLocal
 import base64
 import logging
 from app.config import settings
@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize Argon2 password hasher
-ph = PasswordHasher()
+hasher = PasswordHasher()
 
 security = HTTPBearer()
 
@@ -62,7 +62,7 @@ def get_password_hash(password: str, salt: str) -> str:
     try:
         # Combine password and salt before hashing
         combined = (password + salt).encode('utf-8')
-        hashed = ph.hash(combined)
+        hashed = hasher.hash(combined)
         logger.info(f"Password hashed successfully")
         return hashed
     except Exception as e:
@@ -94,7 +94,7 @@ def verify_password(plain_password: str, hashed_password: str, salt: str) -> boo
             logger.warning("Hash is NOT in Argon2 format")
 
         # Verify using Argon2
-        ph.verify(hashed_password, combined)
+        hasher.verify(hashed_password, combined)
         logger.info("Password verification successful")
         return True
     except Exception as e:
