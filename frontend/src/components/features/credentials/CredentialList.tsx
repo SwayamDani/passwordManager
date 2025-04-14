@@ -14,6 +14,8 @@ import {
   TextField,
   InputAdornment,
   Paper,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Lock as LockIcon,
@@ -26,6 +28,7 @@ import {
   ContentCopy as ContentCopyIcon,
   Add as AddIcon,
   Search as SearchIcon,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
 import { Account } from '@/types/account';
 
@@ -60,6 +63,18 @@ export default function CredentialList({
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - lastChangedDate.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Check if a password is still loading (being decrypted)
+  const isPasswordLoading = (password: string): boolean => {
+    // If the password is exactly '••••••••••', it's likely still being decrypted
+    return password === '••••••••••';
+  };
+
+  // Check if a password is encrypted (failed to decrypt)
+  const isPasswordEncrypted = (password: string): boolean => {
+    // Detect Fernet encrypted passwords
+    return password.startsWith('gAAAAA') && password.length > 30;
   };
 
   // Filter accounts by search query
@@ -137,6 +152,7 @@ export default function CredentialList({
                             onCopyToClipboard(account.username, account.password, service);
                           }}
                           title="Copy username & password"
+                          disabled={isPasswordLoading(account.password) || isPasswordEncrypted(account.password)}
                         >
                           <ContentCopyIcon />
                         </IconButton>
@@ -185,18 +201,30 @@ export default function CredentialList({
                               component="span"
                               variant="body2" 
                             >
-                              Password: {visiblePasswords[service] ? account.password : '••••••••'}
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  togglePasswordVisibility(service, e);
-                                }}
-                                sx={{ ml: 1 }}
-                                aria-label={visiblePasswords[service] ? "Hide password" : "Show password"}
-                              >
-                                {visiblePasswords[service] ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-                              </IconButton>
+                              Password: {
+                                isPasswordLoading(account.password) ? (
+                                  <CircularProgress size={16} thickness={4} sx={{ ml: 1, verticalAlign: 'text-bottom' }} />
+                                ) : isPasswordEncrypted(account.password) ? (
+                                  <Tooltip title="Failed to decrypt password. Try logging out and back in">
+                                    <ErrorIcon fontSize="small" color="error" sx={{ ml: 1, verticalAlign: 'text-bottom' }} />
+                                  </Tooltip>
+                                ) : (
+                                  visiblePasswords[service] ? account.password : '••••••••'
+                                )
+                              }
+                              {!isPasswordLoading(account.password) && !isPasswordEncrypted(account.password) && (
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePasswordVisibility(service, e);
+                                  }}
+                                  sx={{ ml: 1 }}
+                                  aria-label={visiblePasswords[service] ? "Hide password" : "Show password"}
+                                >
+                                  {visiblePasswords[service] ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                                </IconButton>
+                              )}
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

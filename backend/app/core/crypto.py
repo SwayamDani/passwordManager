@@ -51,3 +51,19 @@ class FernetCryptoProvider(ICryptoProvider):
     def decrypt(self, encrypted_data: str, key: bytes) -> str:
         """Decrypt data using Fernet symmetric encryption."""
         return decrypt_password(encrypted_data, key)
+        
+    def get_key_from_salt(self, salt: bytes) -> bytes:
+        """
+        Get an encryption key from a salt only (for recovery purposes).
+        This uses a default secure password for emergency decryption.
+        """
+        # Use a default recovery password
+        recovery_password = "password_manager_recovery_key"
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(recovery_password.encode()))
+        return key

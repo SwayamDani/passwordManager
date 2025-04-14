@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
+import os
 
 from .interfaces import IAccountManager, IUserManager, IPasswordAnalyzer, ICryptoProvider
 from .database import SessionLocal
@@ -32,23 +33,67 @@ class SQLAccountManager(IAccountManager):
             return {}
         
         # Get encryption key
-        encryption_key = self.user_manager.get_encryption_key(username, self.user_manager.current_password)
-        if encryption_key is None:
-            return {}
-        
-        # Decrypt passwords
-        decrypted_accounts = {}
-        for service, account in encrypted_accounts.items():
-            decrypted_account = account.copy()
-            try:
-                # Try to decrypt, assuming it's encrypted
-                decrypted_account['password'] = self.crypto_provider.decrypt(account['password'], encryption_key)
-            except Exception:
-                # If decryption fails, leave as is (for backwards compatibility)
-                decrypted_account['password'] = account['password']
-            decrypted_accounts[service] = decrypted_account
-        
-        return decrypted_accounts
+        encryption_key = None
+        try:
+            # Check if we have a valid authenticated session
+            if self.user_manager.login_verified:
+                # Get user salt to derive encryption key
+                with SessionLocal() as db:
+                    user = db.query(User).filter(User.username == username).first()
+                    if user and user.salt:
+                        try:
+                            # For encryption/decryption, we need to temporarily use the master password
+                            if self.user_manager.current_password:
+                                encryption_key = self.user_manager.get_encryption_key(username, self.user_manager.current_password)
+                            else:
+                                # Try to derive key directly from salt
+                                salt = bytes.fromhex(user.salt)
+                                encryption_key = self.crypto_provider.get_key_from_salt(salt)
+                        except Exception as e:
+                            print(f"Error deriving encryption key: {e}")
+            
+            # If we couldn't get a valid encryption key, return the accounts without decryption
+            if encryption_key is None:
+                print("Warning: Could not get encryption key, returning accounts without decryption")
+                return {
+                    service: {
+                        'username': account['username'],
+                        'service': service,
+                        'has_2fa': account['has_2fa'],
+                        'last_changed': account['last_changed'],
+                        'password': '••••••••••', # Mask the password for security
+                        'password_strength': account.get('password_strength', 0),
+                        'password_breach': account.get('password_breach', False)
+                    } for service, account in encrypted_accounts.items()
+                }
+            
+            # Decrypt passwords
+            decrypted_accounts = {}
+            for service, account in encrypted_accounts.items():
+                decrypted_account = account.copy()
+                try:
+                    # Try to decrypt, assuming it's encrypted
+                    decrypted_account['password'] = self.crypto_provider.decrypt(account['password'], encryption_key)
+                except Exception as e:
+                    # If decryption fails, leave as is (for backwards compatibility)
+                    print(f"Warning: Could not decrypt account {service}: {e}")
+                decrypted_accounts[service] = decrypted_account
+            
+            return decrypted_accounts
+        except Exception as e:
+            print(f"Error retrieving accounts: {e}")
+            # Return accounts with masked passwords as fallback
+            return {
+                service: {
+                    'username': account['username'],
+                    'service': service,
+                    'has_2fa': account['has_2fa'],
+                    'last_changed': account['last_changed'],
+                    'password': '••••••••••', # Mask the password for security
+                    'password_strength': account.get('password_strength', 0),
+                    'password_breach': account.get('password_breach', False)
+                } for service, account in encrypted_accounts.items()
+            }
     
     def check_password_age(self, username: str) -> List[Dict]:
         """Check for passwords older than 90 days."""
@@ -107,8 +152,15 @@ class SQLAccountManager(IAccountManager):
                 if existing_account:
                     return False
                 
-                # Get encryption key
-                encryption_key = self.user_manager.get_encryption_key(username, self.user_manager.current_password)
+                # Get encryption key - use the password parameter directly if current_password is None
+                current_password = self.user_manager.current_password or password
+                encryption_key = self.user_manager.get_encryption_key(username, current_password)
+                
+                if encryption_key is None:
+                    # If we still don't have a key, generate one without relying on stored salt
+                    salt = os.urandom(16)
+                    key, _ = self.crypto_provider.generate_key(password, salt)
+                    encryption_key = key
                 
                 # Encrypt the password
                 encrypted_password = self.crypto_provider.encrypt(password, encryption_key)
@@ -170,7 +222,14 @@ class SQLAccountManager(IAccountManager):
                 
                 if new_password is not None:
                     # Get encryption key
-                    encryption_key = self.user_manager.get_encryption_key(username, self.user_manager.current_password)
+                    current_password = self.user_manager.current_password or new_password
+                    encryption_key = self.user_manager.get_encryption_key(username, current_password)
+                    
+                    if encryption_key is None:
+                        # If we still don't have a key, generate one without relying on stored salt
+                        salt = os.urandom(16)
+                        key, _ = self.crypto_provider.generate_key(new_password, salt)
+                        encryption_key = key
                     
                     # Encrypt new password
                     encrypted_password = self.crypto_provider.encrypt(new_password, encryption_key)

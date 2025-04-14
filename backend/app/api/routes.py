@@ -90,13 +90,18 @@ class PasswordResetRequest(BaseModel):
 @app.post("/api/login")
 async def login(credentials: UserCredentials, request: Request):
     try:
-        
         # Get user ID along with authentication
         user_id = password_manager.login(credentials.username, credentials.password)
         
         if user_id:
+            # Store the password in the password manager for encryption/decryption
+            password_manager.user_manager.current_password = credentials.password
+            
             access_token = jwt_handler.create_access_token(
-                data={"sub": credentials.username}
+                data={
+                    "sub": credentials.username,
+                    "pwd_hash": hash(credentials.password)  # Store a hash of password for verification
+                }
             )
             return {
                 "access_token": access_token, 
@@ -148,6 +153,24 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Security(HTTPBe
     username = payload.get("sub")
     if username is None:
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+    
+    # Get the user's password from the database to use for decryption
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        
+        # Make sure the password manager has access to this user
+        password_manager.user_manager.current_user = username
+        
+        # Attempt to set a temporary decryption key if we have stored encrypted data
+        try:
+            if payload.get("pwd_hash"):
+                # This just sets a flag for decryption - not the actual password
+                password_manager.user_manager.login_verified = True
+        except Exception:
+            pass
+    
     return username
 
 # Add a combined dependency that gets both the authenticated user and DB session

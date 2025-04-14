@@ -135,3 +135,8 @@ class ICryptoProvider(ABC):
     def decrypt(self, encrypted_data: str, key: bytes) -> str:
         """Decrypt data."""
         pass
+        
+    @abstractmethod
+    def get_key_from_salt(self, salt: bytes) -> bytes:
+        """Get an encryption key from a salt only (for recovery purposes)."""
+        pass

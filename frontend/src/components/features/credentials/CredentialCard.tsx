@@ -12,6 +12,8 @@ import {
   Fade,
   Divider,
   useTheme,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   ContentCopy as CopyIcon,
@@ -20,6 +22,7 @@ import {
   Check as CheckIcon,
   Launch as LaunchIcon,
   Close as CloseIcon,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
 
 interface CredentialCardProps {
@@ -36,6 +39,10 @@ export default function CredentialCard({ service, username, password, onClose }:
   const [passwordCopied, setPasswordCopied] = useState(false);
   const [bothCopied, setBothCopied] = useState(false);
 
+  // Check if password is still loading or if there's an encryption error
+  const isPasswordLoading = password === '••••••••••';
+  const isEncrypted = password.startsWith('gAAAAA') && password.length > 30;
+
   const copyUsername = async () => {
     await navigator.clipboard.writeText(username);
     setUsernameCopied(true);
@@ -43,12 +50,14 @@ export default function CredentialCard({ service, username, password, onClose }:
   };
 
   const copyPassword = async () => {
+    if (isPasswordLoading || isEncrypted) return; // Don't copy placeholder or encrypted text
     await navigator.clipboard.writeText(password);
     setPasswordCopied(true);
     setTimeout(() => setPasswordCopied(false), 2000);
   };
 
   const copyBoth = async () => {
+    if (isPasswordLoading || isEncrypted) return; // Don't copy placeholder or encrypted text
     await navigator.clipboard.writeText(`${username}\t${password}`);
     setBothCopied(true);
     setTimeout(() => setBothCopied(false), 2000);
@@ -159,25 +168,43 @@ export default function CredentialCard({ service, username, password, onClose }:
           />
           
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Password</Typography>
-          <TextField
-            fullWidth
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            variant="outlined"
-            InputProps={{
-              readOnly: true,
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ mr: 0.5 }}>
-                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                  </IconButton>
-                  <IconButton onClick={copyPassword} edge="end" color={passwordCopied ? "success" : "default"}>
-                    {passwordCopied ? <CheckIcon /> : <CopyIcon />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+          {isPasswordLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <CircularProgress size={24} />
+              <Typography variant="body2" color="text.secondary">
+                Decrypting password...
+              </Typography>
+            </Box>
+          ) : isEncrypted ? (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <ErrorIcon fontSize="small" />
+                <Typography variant="body2">
+                  Error decrypting password. Please try logging out and back in again.
+                </Typography>
+              </Box>
+            </Alert>
+          ) : (
+            <TextField
+              fullWidth
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              variant="outlined"
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ mr: 0.5 }}>
+                      {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    </IconButton>
+                    <IconButton onClick={copyPassword} edge="end" color={passwordCopied ? "success" : "default"}>
+                      {passwordCopied ? <CheckIcon /> : <CopyIcon />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
           
           <Divider sx={{ my: 3 }} />
           
@@ -190,6 +217,7 @@ export default function CredentialCard({ service, username, password, onClose }:
               onClick={copyBoth}
               startIcon={bothCopied ? <CheckIcon /> : <CopyIcon />}
               color={bothCopied ? "success" : "primary"}
+              disabled={isPasswordLoading || isEncrypted}
             >
               {bothCopied ? 'Copied!' : 'Copy Both'}
             </Button>

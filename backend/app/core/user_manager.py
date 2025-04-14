@@ -24,6 +24,7 @@ class SQLUserManager(IUserManager):
         self.salt_length = 32
         self._current_user = None
         self.current_password = None  # For encryption/decryption
+        self._login_verified = False  # Track if the login was verified
         self.password_hasher = PasswordHasher()
         self.crypto_provider = crypto_provider
         
@@ -34,6 +35,14 @@ class SQLUserManager(IUserManager):
     @current_user.setter
     def current_user(self, username: str):
         self._current_user = username
+        
+    @property
+    def login_verified(self) -> bool:
+        return self._login_verified
+        
+    @login_verified.setter
+    def login_verified(self, verified: bool):
+        self._login_verified = verified
     
     def get_user_accounts(self, username: str) -> Dict:
         """Get all accounts for a user from the database."""
