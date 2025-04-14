@@ -1,9 +1,24 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import HTTPException, Security
+from fastapi import HTTPException, Security, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import os
+import secrets
+import hashlib
+from argon2 import PasswordHasher
+from app.core.models import User
+from app.core.database import SessionLocal
+import base64
+import logging
 from app.config import settings
+
+# Setup logging - Enhanced for password reset debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize Argon2 password hasher
+ph = PasswordHasher()
 
 security = HTTPBearer()
 
