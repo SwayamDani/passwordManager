@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "password-manager"
+version = "0.1.0"
+description = "A secure password manager"
+authors = ["Your Name"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.109.2"
+uvicorn = "^0.27.1"
+redis = "^5.0.1"
+pydantic = "^2.6.1"
+pydantic-settings = "^2.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
