@@ -12,3 +12,6 @@ __pycache__
 .pytest_cache
 .coverage
 htmlcov/
+start.sh.local
+start.bat.local
+nixpacks.toml.backup
