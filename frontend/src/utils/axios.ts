@@ -7,7 +7,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 }
 
 // Make sure API base URL doesn't end with a slash to avoid path issues
-const API_BASE_URL = 'https://password-manager-backend-5d228fef3683.herokuapp.com/api';
+const API_BASE_URL = 'https://web-production-4bc94.up.railway.app/api';
 // const API_BASE_URL = 'http://localhost:8000';
 
 // Create a queue to store requests that should be retried after token refresh
