@@ -4,10 +4,7 @@ nixPkgs = ["python310Full", "python310Packages.pip", "python310Packages.virtuale
 
 [phases.install]
 cmds = [
-  "cd backend",
-  "python3 -m venv venv",
-  "source venv/bin/activate && pip install --upgrade pip",
-  "source venv/bin/activate && pip install -r requirements.txt"
+  "cd backend && python3 -m venv venv && source venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt"
 ]
 
 [phases.build]
