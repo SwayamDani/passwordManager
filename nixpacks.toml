@@ -4,12 +4,14 @@ nixPkgs = ["python310Full", "python310Packages.pip", "python310Packages.virtuale
 
 [phases.install]
 cmds = [
+  "cd backend",
   "python3 -m venv venv",
-  "source venv/bin/activate && cd backend && pip install -r requirements.txt"
+  "source venv/bin/activate && pip install --upgrade pip",
+  "source venv/bin/activate && pip install -r requirements.txt"
 ]
 
 [phases.build]
 cmds = ["echo 'Build complete'"]
 
 [start]
-cmd = "/bin/bash -c 'source venv/bin/activate && cd backend && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT'"
+cmd = "/bin/bash -c 'cd backend && source venv/bin/activate && python -m gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT'"
