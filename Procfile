@@ -1,1 +1,1 @@
-web: cd backend && ./venv/Scripts/activate && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
+web: gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
