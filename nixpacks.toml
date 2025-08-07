@@ -1,12 +1,15 @@
 # nixpacks.toml
 [phases.setup]
-nixPkgs = ["python310", "python310Packages.pip", "python310Packages.setuptools", "python310Packages.wheel"]
+nixPkgs = ["python310Full", "python310Packages.pip", "python310Packages.virtualenv"]
 
 [phases.install]
-cmds = ["cd backend && python -m pip install --user -r requirements.txt"]
+cmds = [
+  "python3 -m venv venv",
+  "source venv/bin/activate && cd backend && pip install -r requirements.txt"
+]
 
 [phases.build]
 cmds = ["echo 'Build complete'"]
 
 [start]
-cmd = "cd backend && python -m gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
+cmd = "source venv/bin/activate && cd backend && gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
