@@ -28,7 +28,7 @@ else:
     logger.info(f"Using SQLite database: {db_url}")
 
 # Initialize the database on startup
-create_tables()
+# create_tables()
 
 # This app variable is being correctly exported for Gunicorn to use
 # as referenced in the Procfile "web: gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker"
