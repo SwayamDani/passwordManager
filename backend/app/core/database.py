@@ -19,7 +19,6 @@ def get_database_url():
     
     # If DATABASE_URL is not set, default to PostgreSQL with standard credentials
     if not database_url:
-        database_url = "postgresql://EndUser@localhost:5432/password_manager"
         logger.info("DATABASE_URL not found in environment, using default PostgreSQL connection")
     
     # Handle Heroku-style PostgreSQL URLs
