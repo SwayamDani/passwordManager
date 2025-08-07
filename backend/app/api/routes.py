@@ -144,24 +144,29 @@ async def login(credentials: UserCredentials, request: Request):
 
 @app.post("/api/register")
 async def register(credentials: UserCredentials, request: Request):
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger("register")
     try:
-        
+        logger.info(f"REGISTER - Payload received: username={credentials.username}, password_length={len(credentials.password) if credentials.password else 0}")
         # Modified to capture user ID
         user_id = password_manager.create_user(credentials.username, credentials.password)
-        
         if user_id:
+            logger.info(f"REGISTER - User created successfully: {credentials.username} (user_id={user_id})")
             return {
                 "message": "User created successfully",
                 "user_id": user_id
             }
-            
+        logger.warning(f"REGISTER - Username already exists: {credentials.username}")
         raise HTTPException(
             status_code=400,
             detail="Username already exists"
         )
     except HTTPException as he:
+        logger.error(f"REGISTER - HTTPException: {he.detail}")
         raise he
     except Exception as e:
+        logger.error(f"REGISTER - Exception: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=str(e)
